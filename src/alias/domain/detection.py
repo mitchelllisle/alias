@@ -1,4 +1,5 @@
 import hashlib
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -9,7 +10,9 @@ class DetectionRequest(BaseModel, frozen=True):
     """Request to detect PII entities in text."""
 
     text: str = Field(..., min_length=1, description="Text to analyse")
-    language: str = Field(default="en", description="ISO 639-1 language code")
+    # Only English is supported in the current engine configuration.
+    # Expand this Literal when multi-language support is added.
+    language: Literal["en"] = Field(default="en", description="ISO 639-1 language code")
 
 
 class DetectionResult(BaseModel, frozen=True):
