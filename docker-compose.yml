@@ -1,0 +1,15 @@
+services:
+  api:
+    build:
+      context: .
+      target: runtime
+    ports:
+      - "8000:8000"
+    environment:
+      ALIAS_DEBUG: "false"
+
+  test:
+    build:
+      context: .
+      target: test
+    command: ["pytest", "tests/", "-v"]
