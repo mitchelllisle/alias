@@ -23,6 +23,12 @@ build-backend = "hatchling.build"
 packages = ["src/alias"]
 
 [dependency-groups]
+# Models are in a separate group so they are included in both dev (uv sync)
+# and production (uv sync --no-dev) builds. Only the dev toolchain is excluded
+# from the runtime image.
+models = [
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+]
 dev = [
     "ruff>=0.9.0",
     "mypy>=2.0,<3.0",
@@ -30,9 +36,6 @@ dev = [
     "pytest-asyncio>=0.24",
     "pytest-cov>=4,<8",
     "httpx>=0.27.0",
-    # spaCy model pinned as a tracked dependency so uv sync always installs it.
-    # en_core_web_lg is used in production (ALIAS_SPACY_MODEL=en_core_web_lg).
-    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
 ]
 
 [tool.ruff]
