@@ -5,7 +5,6 @@ description = "Pseudonymisation service for Australian financial context"
 authors = [
     {name = "Mitchell Lisle", email = "m.lisle90@gmail.com"}
 ]
-readme = "README.md"
 requires-python = ">=3.11,<4.0"
 dependencies = [
     "fastapi>=0.115.0",
