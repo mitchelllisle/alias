@@ -3,7 +3,7 @@ ARG PYTHON_VERSION=3.12
 # ── base: shared dependency install ───────────────────────────────────────────
 FROM python:${PYTHON_VERSION}-slim AS base
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.11.24 /uv /usr/local/bin/uv
 
 # Install directly into the system Python — no venv needed in containers
 ENV UV_SYSTEM_PYTHON=1
@@ -15,7 +15,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-cache
 
 COPY src/ ./src/
-RUN uv pip install --no-deps -e . --no-cache-dir
+RUN uv pip install --no-deps . --no-cache-dir
 
 # ── runtime ───────────────────────────────────────────────────────────────────
 FROM base AS runtime

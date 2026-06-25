@@ -38,7 +38,7 @@ exclude = [".git", ".venv", "dist", "build", "__pycache__"]
 select = ["E", "F", "I"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.11"
 strict = true
 ignore_missing_imports = true
 

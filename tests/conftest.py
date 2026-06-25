@@ -1,3 +1,5 @@
+from collections.abc import AsyncGenerator
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -14,7 +16,7 @@ def test_settings() -> Settings:
 
 
 @pytest.fixture
-async def client(test_settings: Settings) -> AsyncClient:
+async def client(test_settings: Settings) -> AsyncGenerator[AsyncClient, None]:
     """AsyncClient wired to the app.
 
     ASGITransport does not trigger the ASGI lifespan scope. State is injected
