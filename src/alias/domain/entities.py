@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Literal
+from typing import Literal, NamedTuple
 
 from pydantic import BaseModel
 
@@ -21,17 +21,23 @@ class EntityType(str, Enum):
     NRP = "NRP"  # Nationality / religion / political group
 
 
-# Business rules: (is_pii, sensitivity) for each recognised entity type.
-# Every member of EntityType must have an entry — KeyError on lookup means
-# the enum and this map are out of sync, which is a bug.
-ENTITY_CLASSIFICATION: dict[EntityType, tuple[bool, Sensitivity]] = {
-    EntityType.PERSON: (True, "high"),
-    EntityType.EMAIL_ADDRESS: (True, "medium"),
-    EntityType.PHONE_NUMBER: (True, "medium"),
-    EntityType.CREDIT_CARD: (True, "critical"),
-    EntityType.LOCATION: (True, "low"),
-    EntityType.DATE_TIME: (False, "low"),
-    EntityType.NRP: (False, "low"),
+class EntityClassification(NamedTuple):
+    """PII classification and sensitivity level for an entity type."""
+
+    is_pii: bool
+    sensitivity: Sensitivity
+
+
+# Business rules: classification for each recognised entity type.
+# Every EntityType member must have an entry — KeyError means enum and map are out of sync.
+ENTITY_CLASSIFICATION: dict[EntityType, EntityClassification] = {
+    EntityType.PERSON: EntityClassification(is_pii=True, sensitivity="high"),
+    EntityType.EMAIL_ADDRESS: EntityClassification(is_pii=True, sensitivity="medium"),
+    EntityType.PHONE_NUMBER: EntityClassification(is_pii=True, sensitivity="medium"),
+    EntityType.CREDIT_CARD: EntityClassification(is_pii=True, sensitivity="critical"),
+    EntityType.LOCATION: EntityClassification(is_pii=True, sensitivity="low"),
+    EntityType.DATE_TIME: EntityClassification(is_pii=False, sensitivity="low"),
+    EntityType.NRP: EntityClassification(is_pii=False, sensitivity="low"),
 }
 
 

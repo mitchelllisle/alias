@@ -14,5 +14,8 @@ class Settings(BaseSettings):
     )
 
     debug: bool = False
-    spacy_model: str = "en_core_web_lg"
+    # en_core_web_sm is the default (dev/test). Production deployments that
+    # need higher accuracy should set ALIAS_SPACY_MODEL=en_core_web_lg and
+    # ensure the model is available in the container.
+    spacy_model: str = "en_core_web_sm"
     executor_max_workers: int = 4

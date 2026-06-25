@@ -1,4 +1,4 @@
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Generator
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
@@ -18,11 +18,12 @@ def test_settings() -> Settings:
 
 
 @pytest.fixture(scope="session")
-def analyser(test_settings: Settings) -> AsyncAnalyser:
+def analyser(test_settings: Settings) -> Generator[AsyncAnalyser, None, None]:
     """Build the analyser engine once per session — spaCy load is expensive."""
     executor = ThreadPoolExecutor(max_workers=2)
     engine = build_analyser_engine(spacy_model=test_settings.spacy_model)
-    return AsyncAnalyser(engine, executor)
+    yield AsyncAnalyser(engine, executor)
+    executor.shutdown(wait=True)
 
 
 @pytest.fixture
