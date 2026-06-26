@@ -1,5 +1,5 @@
 meta {
-  name: Anonymise (Auto Detect)
+  name: Anonymise (Accurate)
   type: http
   seq: 6
 }
@@ -18,6 +18,6 @@ headers {
 body:json {
   {
     "text": "Please contact Alice Smith at alice@example.com and use BSB 062-000.",
-    "refine": true
+    "mode": "accurate"
   }
 }

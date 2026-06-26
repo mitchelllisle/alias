@@ -1,7 +1,7 @@
 meta {
-  name: Detect (No Refine)
+  name: Detect (Accurate)
   type: http
-  seq: 3
+  seq: 2
 }
 
 post {
@@ -17,8 +17,8 @@ headers {
 
 body:json {
   {
-    "text": "TFN 123 456 782, ABN 51 824 753 556, BSB 062-000",
+    "text": "Contact Jane Smith at jane@example.com and call 0412 345 678.",
     "language": "en",
-    "refine": false
+    "mode": "accurate"
   }
 }

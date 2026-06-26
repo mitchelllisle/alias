@@ -1,7 +1,7 @@
 meta {
-  name: Assess (Empty Text 422)
+  name: Assess (Auto Detect)
   type: http
-  seq: 19
+  seq: 10
 }
 
 post {
@@ -17,6 +17,7 @@ headers {
 
 body:json {
   {
-    "text": ""
+    "text": "Applicant Jane Smith, email jane@example.com, TFN 123 456 782, BSB 062-000.",
+    "context": "Australian home loan application"
   }
 }

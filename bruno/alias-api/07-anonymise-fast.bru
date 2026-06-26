@@ -1,7 +1,7 @@
 meta {
-  name: Anonymise (Empty Text 422)
+  name: Anonymise (Fast)
   type: http
-  seq: 9
+  seq: 7
 }
 
 post {
@@ -17,6 +17,7 @@ headers {
 
 body:json {
   {
-    "text": ""
+    "text": "Please contact Alice Smith at alice@example.com and use BSB 062-000.",
+    "mode": "fast"
   }
 }

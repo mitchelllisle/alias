@@ -1,7 +1,7 @@
 meta {
-  name: Assess (503 When Not Configured)
+  name: Assess (With Detections)
   type: http
-  seq: 18
+  seq: 11
 }
 
 post {
@@ -31,6 +31,7 @@ body:json {
         }
       ],
       "input_hash": "sha256:paste-from-detect"
-    }
+    },
+    "context": "Australian retail banking document"
   }
 }

@@ -1,7 +1,7 @@
 meta {
-  name: Detect (Basic)
+  name: Detect (Fast)
   type: http
-  seq: 2
+  seq: 3
 }
 
 post {
@@ -17,8 +17,8 @@ headers {
 
 body:json {
   {
-    "text": "Contact Jane Smith at jane@example.com and call 0412 345 678.",
+    "text": "TFN 123 456 782, ABN 51 824 753 556, BSB 062-000",
     "language": "en",
-    "refine": true
+    "mode": "fast"
   }
 }
