@@ -6,6 +6,7 @@ from httpx import ASGITransport, AsyncClient
 
 from alias.app import create_app
 from alias.engine.analyser import AsyncAnalyser, build_analyser_engine
+from alias.engine.anonymiser import AsyncAnonymiser
 from alias.recognisers.registry import build_recognisers
 from alias.settings import Settings
 
@@ -43,5 +44,28 @@ async def detect_client(test_settings: Settings, analyser: AsyncAnalyser) -> Asy
     """Client with analyser injected into app.state for detect endpoint tests."""
     app = create_app(settings=test_settings)
     app.state.analyser = analyser
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield c
+
+
+@pytest.fixture(scope="session")
+def anonymiser() -> Generator[AsyncAnonymiser, None, None]:
+    """Build the AnonymizerEngine once per session."""
+    from presidio_anonymizer import AnonymizerEngine
+    executor = ThreadPoolExecutor(max_workers=2)
+    yield AsyncAnonymiser(AnonymizerEngine(), executor)
+    executor.shutdown(wait=True)
+
+
+@pytest.fixture
+async def anonymise_client(
+    test_settings: Settings,
+    analyser: AsyncAnalyser,
+    anonymiser: AsyncAnonymiser,
+) -> AsyncGenerator[AsyncClient, None]:
+    """Client with both analyser and anonymiser injected for anonymise endpoint tests."""
+    app = create_app(settings=test_settings)
+    app.state.analyser = analyser
+    app.state.anonymiser = anonymiser
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c

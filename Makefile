@@ -6,7 +6,7 @@ help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 install: ## Install all dependencies
-	uv sync
+	uv sync --all-groups
 
 serve: ## Run the server locally with hot-reload
 	uv run uvicorn alias.app:app --reload --host 0.0.0.0 --port 8000

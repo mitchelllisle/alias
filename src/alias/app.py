@@ -3,9 +3,11 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from presidio_anonymizer import AnonymizerEngine
 
-from alias.api.routes import detect, health
+from alias.api.routes import anonymise, detect, health
 from alias.engine.analyser import AsyncAnalyser, build_analyser_engine
+from alias.engine.anonymiser import AsyncAnonymiser
 from alias.recognisers.registry import build_recognisers
 from alias.settings import Settings
 
@@ -20,6 +22,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         extra_recognisers=build_recognisers(),
     )
     app.state.analyser = AsyncAnalyser(engine, executor)
+    app.state.anonymiser = AsyncAnonymiser(AnonymizerEngine(), executor)  # type: ignore[no-untyped-call]
     yield
     executor.shutdown(wait=True)
 
@@ -45,6 +48,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.include_router(health.router)
     app.include_router(detect.router, prefix="/detect", tags=["detection"])
+    app.include_router(anonymise.router, prefix="/anonymise", tags=["anonymisation"])
 
     return app
 
