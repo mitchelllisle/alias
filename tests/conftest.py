@@ -6,6 +6,7 @@ from httpx import ASGITransport, AsyncClient
 
 from alias.app import create_app
 from alias.engine.analyser import AsyncAnalyser, build_analyser_engine
+from alias.recognisers.registry import build_recognisers
 from alias.settings import Settings
 
 
@@ -21,7 +22,10 @@ def test_settings() -> Settings:
 def analyser(test_settings: Settings) -> Generator[AsyncAnalyser, None, None]:
     """Build the analyser engine once per session — spaCy load is expensive."""
     executor = ThreadPoolExecutor(max_workers=2)
-    engine = build_analyser_engine(spacy_model=test_settings.spacy_model)
+    engine = build_analyser_engine(
+        spacy_model=test_settings.spacy_model,
+        extra_recognisers=build_recognisers(),
+    )
     yield AsyncAnalyser(engine, executor)
     executor.shutdown(wait=True)
 

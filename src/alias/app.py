@@ -6,6 +6,7 @@ from fastapi import FastAPI
 
 from alias.api.routes import detect, health
 from alias.engine.analyser import AsyncAnalyser, build_analyser_engine
+from alias.recognisers.registry import build_recognisers
 from alias.settings import Settings
 
 
@@ -14,7 +15,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Startup / shutdown hook — initialise engines, yield, then clean up."""
     settings: Settings = app.state.settings
     executor = ThreadPoolExecutor(max_workers=settings.executor_max_workers)
-    engine = build_analyser_engine(spacy_model=settings.spacy_model)
+    engine = build_analyser_engine(
+        spacy_model=settings.spacy_model,
+        extra_recognisers=build_recognisers(),
+    )
     app.state.analyser = AsyncAnalyser(engine, executor)
     yield
     executor.shutdown(wait=True)
