@@ -1,0 +1,22 @@
+meta {
+  name: Assess (Empty Text 422)
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/assess
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "text": ""
+  }
+}

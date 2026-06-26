@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from presidio_anonymizer import AnonymizerEngine
 
-from alias.api.routes import anonymise, detect, health
+from alias.api.routes import anonymise, assess, detect, health
 from alias.engine.analyser import AsyncAnalyser, build_analyser_engine
 from alias.engine.anonymiser import AsyncAnonymiser
 from alias.recognisers.registry import build_recognisers
@@ -23,6 +23,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     app.state.analyser = AsyncAnalyser(engine, executor)
     app.state.anonymiser = AsyncAnonymiser(AnonymizerEngine(), executor)  # type: ignore[no-untyped-call]
+
+    if settings.judge_model:
+        from alias.judge.assessor import build_assessor_agent
+        from alias.judge.refiner import build_refiner_agent
+
+        app.state.refiner = build_refiner_agent(settings.judge_model, settings.judge_temperature)
+        app.state.assessor = build_assessor_agent(settings.judge_model, settings.judge_temperature)
+    else:
+        app.state.refiner = None
+        app.state.assessor = None
+
     yield
     executor.shutdown(wait=True)
 
@@ -46,9 +57,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.settings = settings
+    # Initialise all engine state to None so tests that bypass the lifespan
+    # never hit AttributeError on app.state.<key>.
+    app.state.analyser = None
+    app.state.anonymiser = None
+    app.state.refiner = None
+    app.state.assessor = None
+
     app.include_router(health.router)
     app.include_router(detect.router, prefix="/detect", tags=["detection"])
     app.include_router(anonymise.router, prefix="/anonymise", tags=["anonymisation"])
+    app.include_router(assess.router, prefix="/assess", tags=["assessment"])
 
     return app
 

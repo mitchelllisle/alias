@@ -1,0 +1,23 @@
+meta {
+  name: Assess (Auto Detect)
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/assess
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "text": "Applicant Jane Smith, email jane@example.com, TFN 123 456 782, BSB 062-000.",
+    "context": "Australian home loan application"
+  }
+}

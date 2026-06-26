@@ -3,10 +3,14 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from pydantic_ai import Agent
+from pydantic_ai.models.test import TestModel
 
 from alias.app import create_app
 from alias.engine.analyser import AsyncAnalyser, build_analyser_engine
 from alias.engine.anonymiser import AsyncAnonymiser
+from alias.judge.assessor import AssessmentDecision
+from alias.judge.refiner import RefinerDecision
 from alias.recognisers.registry import build_recognisers
 from alias.settings import Settings
 
@@ -31,6 +35,29 @@ def analyser(test_settings: Settings) -> Generator[AsyncAnalyser, None, None]:
     executor.shutdown(wait=True)
 
 
+@pytest.fixture(scope="session")
+def anonymiser() -> Generator[AsyncAnonymiser, None, None]:
+    """Build the AnonymizerEngine once per session."""
+    from presidio_anonymizer import AnonymizerEngine
+    executor = ThreadPoolExecutor(max_workers=2)
+    yield AsyncAnonymiser(AnonymizerEngine(), executor)
+    executor.shutdown(wait=True)
+
+
+@pytest.fixture(scope="session")
+def refiner_agent() -> Agent[None, RefinerDecision]:
+    """TestModel-backed refiner — deterministic, no real LLM calls."""
+    return Agent(TestModel(), output_type=RefinerDecision, system_prompt="test")
+
+
+@pytest.fixture(scope="session")
+def assessor_agent() -> Agent[None, AssessmentDecision]:
+    """TestModel-backed assessor — deterministic, no real LLM calls."""
+    return Agent(TestModel(), output_type=AssessmentDecision, system_prompt="test")
+
+
+# ── Clients ───────────────────────────────────────────────────────────────────
+
 @pytest.fixture
 async def client(test_settings: Settings) -> AsyncGenerator[AsyncClient, None]:
     """Baseline client — no engine state injected. Use for health tests."""
@@ -41,20 +68,11 @@ async def client(test_settings: Settings) -> AsyncGenerator[AsyncClient, None]:
 
 @pytest.fixture
 async def detect_client(test_settings: Settings, analyser: AsyncAnalyser) -> AsyncGenerator[AsyncClient, None]:
-    """Client with analyser injected into app.state for detect endpoint tests."""
+    """Analyser only — no refiner. Tests that refine=True is silently skipped."""
     app = create_app(settings=test_settings)
     app.state.analyser = analyser
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
-
-
-@pytest.fixture(scope="session")
-def anonymiser() -> Generator[AsyncAnonymiser, None, None]:
-    """Build the AnonymizerEngine once per session."""
-    from presidio_anonymizer import AnonymizerEngine
-    executor = ThreadPoolExecutor(max_workers=2)
-    yield AsyncAnonymiser(AnonymizerEngine(), executor)
-    executor.shutdown(wait=True)
 
 
 @pytest.fixture
@@ -63,9 +81,39 @@ async def anonymise_client(
     analyser: AsyncAnalyser,
     anonymiser: AsyncAnonymiser,
 ) -> AsyncGenerator[AsyncClient, None]:
-    """Client with both analyser and anonymiser injected for anonymise endpoint tests."""
+    """Analyser + anonymiser, no refiner."""
     app = create_app(settings=test_settings)
     app.state.analyser = analyser
     app.state.anonymiser = anonymiser
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield c
+
+
+@pytest.fixture
+async def refined_client(
+    test_settings: Settings,
+    analyser: AsyncAnalyser,
+    anonymiser: AsyncAnonymiser,
+    refiner_agent: Agent[None, RefinerDecision],
+) -> AsyncGenerator[AsyncClient, None]:
+    """Analyser + anonymiser + TestModel refiner — tests the refine path."""
+    app = create_app(settings=test_settings)
+    app.state.analyser = analyser
+    app.state.anonymiser = anonymiser
+    app.state.refiner = refiner_agent
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield c
+
+
+@pytest.fixture
+async def assess_client(
+    test_settings: Settings,
+    analyser: AsyncAnalyser,
+    assessor_agent: Agent[None, AssessmentDecision],
+) -> AsyncGenerator[AsyncClient, None]:
+    """Analyser + TestModel assessor — for /assess endpoint tests."""
+    app = create_app(settings=test_settings)
+    app.state.analyser = analyser
+    app.state.assessor = assessor_agent
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c

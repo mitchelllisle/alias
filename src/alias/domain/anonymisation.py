@@ -25,6 +25,13 @@ class AnonymisationRequest(BaseModel, frozen=True):
         default_factory=dict,
         description="Override the default operator per entity type, e.g. {'PERSON': 'redact'}",
     )
+    mode: Literal["fast", "accurate"] = Field(
+        default="accurate",
+        description=(
+            "'accurate' runs an LLM pass on detections before anonymising (slower). "
+            "'fast' skips the LLM. No-ops to 'fast' when no judge model is configured."
+        ),
+    )
 
 
 class AnonymisationResult(BaseModel, frozen=True):

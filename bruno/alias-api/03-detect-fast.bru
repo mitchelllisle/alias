@@ -1,0 +1,24 @@
+meta {
+  name: Detect (Fast)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/detect
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "text": "TFN 123 456 782, ABN 51 824 753 556, BSB 062-000",
+    "language": "en",
+    "mode": "fast"
+  }
+}
