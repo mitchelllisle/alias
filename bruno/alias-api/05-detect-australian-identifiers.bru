@@ -1,0 +1,23 @@
+meta {
+  name: Detect (Australian Identifiers)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/detect
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "text": "Customer details: TFN 123 456 782, ABN 51 824 753 556, ACN 004 085 616, BSB 062-000, phone 0412 345 678.",
+    "language": "en"
+  }
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Anonymise (Hash Email Override)
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/anonymise
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "text": "Email alerts should go to ops-team@example.com.",
+    "operator_overrides": {
+      "EMAIL_ADDRESS": "hash"
+    }
+  }
+}

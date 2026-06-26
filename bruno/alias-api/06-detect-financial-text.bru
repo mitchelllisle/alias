@@ -1,0 +1,23 @@
+meta {
+  name: Detect (Financial Text)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/detect
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "text": "Hi, I am Sam Lee. Email me at sam.lee@bank.com.au about account 12345678 and card 4111 1111 1111 1111.",
+    "language": "en"
+  }
+}

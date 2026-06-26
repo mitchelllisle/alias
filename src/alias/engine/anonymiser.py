@@ -29,6 +29,19 @@ _DEFAULT_OPERATOR_CONFIGS: dict[str, tuple[str, dict[str, object]]] = {
 }
 
 
+def _override_params(op_type: OperatorType, entity_type: str) -> dict[str, object]:
+    """Return safe default params for override operator types.
+
+    Presidio's mask operator requires parameters like masking_char, so overrides
+    cannot use an empty params dict for all operator types.
+    """
+    if op_type == "replace":
+        return {"new_value": f"<{entity_type}>"}
+    if op_type == "mask":
+        return {"masking_char": "*", "chars_to_mask": 100, "from_end": False}
+    return {}
+
+
 def _build_operators(overrides: dict[str, OperatorType]) -> dict[str, OperatorConfig]:
     """Merge default operator configs with per-request overrides.
 
@@ -43,7 +56,7 @@ def _build_operators(overrides: dict[str, OperatorType]) -> dict[str, OperatorCo
         for entity_type, (op_name, params) in _DEFAULT_OPERATOR_CONFIGS.items()
     }
     for entity_type, op_type in overrides.items():
-        merged[entity_type] = OperatorConfig(op_type, {})
+        merged[entity_type] = OperatorConfig(op_type, _override_params(op_type, entity_type))
     return merged
 
 

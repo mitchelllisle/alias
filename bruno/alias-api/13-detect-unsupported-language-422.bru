@@ -1,0 +1,23 @@
+meta {
+  name: Detect (Unsupported Language 422)
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/detect
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "text": "Bonjour, appelez-moi au 04 12 34 56 78",
+    "language": "fr"
+  }
+}

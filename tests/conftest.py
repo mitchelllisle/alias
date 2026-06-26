@@ -3,10 +3,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from pydantic_ai import Agent
 
 from alias.app import create_app
 from alias.engine.analyser import AsyncAnalyser, build_analyser_engine
 from alias.engine.anonymiser import AsyncAnonymiser
+from alias.judge.service import JudgeDecision
 from alias.recognisers.registry import build_recognisers
 from alias.settings import Settings
 
@@ -67,5 +69,28 @@ async def anonymise_client(
     app = create_app(settings=test_settings)
     app.state.analyser = analyser
     app.state.anonymiser = anonymiser
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield c
+
+
+@pytest.fixture(scope="session")
+def judge_agent() -> Agent[None, JudgeDecision]:
+    """TestModel-backed judge agent — deterministic, no real LLM calls."""
+    from pydantic_ai.models.test import TestModel
+    return Agent(TestModel(), output_type=JudgeDecision, system_prompt="test")
+
+
+@pytest.fixture
+async def judge_client(
+    test_settings: Settings,
+    analyser: AsyncAnalyser,
+    anonymiser: AsyncAnonymiser,
+    judge_agent: Agent[None, JudgeDecision],
+) -> AsyncGenerator[AsyncClient, None]:
+    """Client with analyser, anonymiser, and TestModel judge injected."""
+    app = create_app(settings=test_settings)
+    app.state.analyser = analyser
+    app.state.anonymiser = anonymiser
+    app.state.judge = judge_agent
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c

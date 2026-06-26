@@ -1,5 +1,8 @@
 .DEFAULT_GOAL := help
 
+# Prefer Docker Compose v2 (`docker compose`), fall back to legacy v1 (`docker-compose`).
+DOCKER_COMPOSE := $(shell if docker compose version >/dev/null 2>&1; then echo "docker compose"; elif command -v docker-compose >/dev/null 2>&1; then echo "docker-compose"; else echo "docker compose"; fi)
+
 .PHONY: help install serve test lint format docker-build docker-serve docker-test
 
 help:
@@ -23,10 +26,10 @@ format: ## Auto-fix lint issues
 	uv run ruff check --fix src/ tests/
 
 docker-build: ## Build all Docker images
-	docker compose build
+	$(DOCKER_COMPOSE) build
 
 docker-serve: ## Run the service via Docker
-	docker compose up api
+	$(DOCKER_COMPOSE) up api
 
 docker-test: ## Run tests via Docker
-	docker compose run --rm test
+	$(DOCKER_COMPOSE) run --rm test

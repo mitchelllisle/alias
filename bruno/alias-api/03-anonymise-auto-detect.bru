@@ -1,0 +1,22 @@
+meta {
+  name: Anonymise (Auto Detect)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/anonymise
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "text": "Please contact Alice Smith at alice@example.com and use BSB 062-000."
+  }
+}

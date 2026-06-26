@@ -1,0 +1,26 @@
+meta {
+  name: Anonymise (Redact Person and Phone)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/anonymise
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "text": "Contact Alice Brown on 0412 345 678 or at alice@example.com.",
+    "operator_overrides": {
+      "PERSON": "redact",
+      "AU_PHONE": "redact"
+    }
+  }
+}

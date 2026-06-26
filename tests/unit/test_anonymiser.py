@@ -11,6 +11,7 @@ from alias.domain.entities import ENTITY_CLASSIFICATION, Entity, EntityType
 from alias.engine.anonymiser import (
     AsyncAnonymiser,
     _build_entity_map,
+    _build_operators,
     _expected_replacement,
     _to_recognizer_result,
 )
@@ -91,6 +92,20 @@ def test_build_entity_map_empty_entities() -> None:
     assert _build_entity_map([], {}) == {}
 
 
+def test_build_operators_override_mask_has_required_params() -> None:
+    operators = _build_operators({"AU_TFN": "mask"})
+    params = operators["AU_TFN"].params
+    assert operators["AU_TFN"].operator_name == "mask"
+    assert params["masking_char"] == "*"
+    assert params["chars_to_mask"] == 100
+
+
+def test_build_operators_override_replace_has_new_value() -> None:
+    operators = _build_operators({"PERSON": "replace"})
+    assert operators["PERSON"].operator_name == "replace"
+    assert operators["PERSON"].params["new_value"] == "<PERSON>"
+
+
 # ── AsyncAnonymiser ───────────────────────────────────────────────────────────
 
 async def test_anonymise_replaces_email(anonymiser: AsyncAnonymiser) -> None:
@@ -130,6 +145,22 @@ async def test_anonymise_operator_override_redact(anonymiser: AsyncAnonymiser) -
     )
     result = await anonymiser.anonymise(req)
     assert "Jane Smith" not in result.anonymised_text
+
+
+async def test_anonymise_operator_override_mask(anonymiser: AsyncAnonymiser) -> None:
+    from alias.domain.anonymisation import AnonymisationRequest
+    from alias.domain.detection import DetectionResult
+
+    text = "My TFN is 123 456 782"
+    entity = _entity(EntityType.AU_TFN, "123 456 782", start=10)
+    detections = DetectionResult.from_text(text, [entity])
+    req = AnonymisationRequest(
+        text=text,
+        detections=detections,
+        operator_overrides={"AU_TFN": "mask"},
+    )
+    result = await anonymiser.anonymise(req)
+    assert "123 456 782" not in result.anonymised_text
 
 
 async def test_anonymise_no_entities_text_unchanged(anonymiser: AsyncAnonymiser) -> None:

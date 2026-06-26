@@ -1,0 +1,25 @@
+meta {
+  name: Anonymise (Mask TFN Override)
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/anonymise
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "text": "My TFN is 123 456 782 and my name is Jordan Miles.",
+    "operator_overrides": {
+      "AU_TFN": "mask"
+    }
+  }
+}

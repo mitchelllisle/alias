@@ -1,0 +1,22 @@
+meta {
+  name: Detect (Missing Text 422)
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/detect
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "language": "en"
+  }
+}

@@ -19,3 +19,7 @@ class Settings(BaseSettings):
     # ensure the model is available in the container.
     spacy_model: str = "en_core_web_sm"
     executor_max_workers: int = 4
+    # LLM judge — set ALIAS_JUDGE_MODEL to enable (e.g. 'openai:gpt-4o').
+    # When unset the /judge endpoints return 503.
+    judge_model: str | None = None
+    judge_temperature: float = 0.0

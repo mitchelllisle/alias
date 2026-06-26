@@ -5,9 +5,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from presidio_anonymizer import AnonymizerEngine
 
-from alias.api.routes import anonymise, detect, health
+from alias.api.routes import anonymise, detect, health, judge
 from alias.engine.analyser import AsyncAnalyser, build_analyser_engine
 from alias.engine.anonymiser import AsyncAnonymiser
+from alias.judge.agent import build_judge_agent
 from alias.recognisers.registry import build_recognisers
 from alias.settings import Settings
 
@@ -23,6 +24,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     app.state.analyser = AsyncAnalyser(engine, executor)
     app.state.anonymiser = AsyncAnonymiser(AnonymizerEngine(), executor)  # type: ignore[no-untyped-call]
+    app.state.judge = build_judge_agent(settings) if settings.judge_model else None
     yield
     executor.shutdown(wait=True)
 
@@ -46,9 +48,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.settings = settings
+    # Default all engine state to None — the lifespan overwrites these.
+    # Initialising here ensures the keys exist even when tests bypass the lifespan.
+    app.state.analyser = None
+    app.state.anonymiser = None
+    app.state.judge = None
     app.include_router(health.router)
     app.include_router(detect.router, prefix="/detect", tags=["detection"])
     app.include_router(anonymise.router, prefix="/anonymise", tags=["anonymisation"])
+    app.include_router(judge.router, prefix="/judge", tags=["judge"])
 
     return app
 
