@@ -1,5 +1,5 @@
 [project]
-name = "alias"
+name = "pseudoalias"
 version = "0.1.0"
 description = "Pseudonymisation service for Australian financial context"
 authors = [
