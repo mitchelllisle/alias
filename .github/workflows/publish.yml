@@ -32,4 +32,4 @@ jobs:
           python-version: 3.x
       - uses: astral-sh/setup-uv@v5
       - run: make install && make install-docs
-      - run: uv run --group docs mkdocs gh-deploy --force
+      - run: make docs-deploy

@@ -8,20 +8,20 @@
 
 This is the most important section of this document. Read it before building anything on top of this service.
 
-### What alias does
+### What Priveil does
 
-Alias performs **pseudonymisation**: it finds spans of text that look like personally identifiable information and replaces them with labelled placeholders (`<PERSON>`, `***-***-***`, `XXX-XXX`). It does this with reasonable precision for Australian financial identifiers. It is useful for:
+Priveil performs **pseudonymisation**: it finds spans of text that look like personally identifiable information and replaces them with labelled placeholders (`<PERSON>`, `***-***-***`, `XXX-XXX`). It does this with reasonable precision for Australian financial identifiers. It is useful for:
 
 - Preventing PII from appearing in application logs, analytics pipelines, and third-party integrations
 - Reducing the surface area of accidental data exposure in systems that handle financial text
 - Meeting process and compliance requirements around data handling
 - Making data *less obviously identifying* before it crosses a trust boundary
 
-### What alias does not do
+### What Priveil does not do
 
-Alias **does not produce anonymised data** in any mathematically rigorous sense. Specifically:
+Priveil **does not produce anonymised data** in any mathematically rigorous sense. Specifically:
 
-**Detection is incomplete by design.** There is no way to enumerate all possible identifying information. A phone number formatted unusually, a name that is also a common word, a combination of innocuous-looking fields — these may identify someone. Alias will miss them. Damien Desfontaines writes: *"Data is often more identifiable than it seems. Even a few innocuous-looking pieces of information can be enough to identify someone. And people tend to underestimate what data can be used to reidentify people in a dataset."*
+**Detection is incomplete by design.** There is no way to enumerate all possible identifying information. A phone number formatted unusually, a name that is also a common word, a combination of innocuous-looking fields — these may identify someone. Priveil will miss them. Damien Desfontaines writes: *"Data is often more identifiable than it seems. Even a few innocuous-looking pieces of information can be enough to identify someone. And people tend to underestimate what data can be used to reidentify people in a dataset."*
 
 **Pseudonymisation is not anonymisation.** Replacing a name with `<PERSON>` preserves the structure of the original data. The `entity_map` returned by `/anonymise` records the original PII spans as keys — it is sensitive data that must be treated with the same controls as the original text. Note that the map is not a complete reversal: placeholders are not positionally indexed, multiple spans may collapse to the same label (e.g. all names → `<PERSON>`), and the actual output for `mask`/`hash` operators is only an approximation. Even so, the map contains the real PII values and must be protected accordingly. This is explicitly the first technique Desfontaines discusses as *failing* to protect privacy: *"'No longer obvious' is very different from 'impossible to figure out'."*
 
@@ -78,7 +78,7 @@ Definition: A presidio `EntityRecognizer` subclass — the atomic detection unit
 
 **Pseudonymisation**
 Definition: What this service actually does. Detected entity spans are replaced with consistent labelled placeholders. The `entity_map` records the original PII spans as keys — it is sensitive data that must be treated with the same controls as the original text. Note: the map is not sufficient to reconstruct the full original document — placeholders are not positionally indexed, multiple distinct spans may collapse to the same label, and the map is explicitly approximate for `mask`/`hash` operators (where the exact output is not knowable before the engine runs). Re-identification risk comes primarily from the original PII values stored as keys, not from the ability to reverse the entire document.
-Alias / external term: Callers and documentation sometimes use "anonymisation" loosely. In this codebase, "anonymise" refers to the pseudonymisation operation. True anonymisation — where re-identification is mathematically infeasible — is explicitly out of scope.
+Priveil / external term: Callers and documentation sometimes use "anonymisation" loosely. In this codebase, "anonymise" refers to the pseudonymisation operation. True anonymisation — where re-identification is mathematically infeasible — is explicitly out of scope.
 Not to be confused with: Anonymisation. The distinction matters legally (Privacy Act), technically, and ethically.
 
 **Operator**
