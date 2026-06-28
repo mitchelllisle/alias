@@ -2089,7 +2089,6 @@ version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
-    { name = "mcp" },
     { name = "presidio-analyzer" },
     { name = "presidio-anonymizer" },
     { name = "pydantic" },
@@ -2097,6 +2096,11 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "spacy" },
     { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.optional-dependencies]
+mcp = [
+    { name = "mcp" },
 ]
 
 [package.dev-dependencies]
@@ -2119,7 +2123,7 @@ models = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.138.1" },
-    { name = "mcp", specifier = ">=1.28.0" },
+    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.28.0" },
     { name = "presidio-analyzer", specifier = ">=2.2.362" },
     { name = "presidio-anonymizer", specifier = ">=2.2.362" },
     { name = "pydantic", specifier = ">=2.13.4,<3.0" },
@@ -2128,6 +2132,7 @@ requires-dist = [
     { name = "spacy", specifier = ">=3.8.14" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.49.0" },
 ]
+provides-extras = ["mcp"]
 
 [package.metadata.requires-dev]
 dev = [
