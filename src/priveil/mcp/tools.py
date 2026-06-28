@@ -22,14 +22,15 @@ from priveil.mcp.server import get_state, mcp
 async def detect(
     text: str,
     ctx: Context,  # type: ignore[type-arg]
-    mode: Literal["fast", "judge"] = "fast",
+    mode: Literal["fast", "judge"] = "judge",
 ) -> DetectionResult:
     """Detect PII entities in text.
 
     Args:
         text: The text to scan for PII.
         mode: 'fast' for raw detector output; 'judge' adds an LLM pass to
-            remove false positives (requires PRIVEIL_JUDGE_MODEL).
+            remove false positives. No-ops to 'fast' when PRIVEIL_JUDGE_MODEL
+            is unset — no configuration change required.
 
     Returns:
         Detected entities with type, offsets, confidence, PII flag, sensitivity,
@@ -46,7 +47,7 @@ async def detect(
 async def anonymise(
     text: str,
     ctx: Context,  # type: ignore[type-arg]
-    mode: Literal["fast", "judge"] = "fast",
+    mode: Literal["fast", "judge"] = "judge",
     operator_overrides: dict[str, str] | None = None,
 ) -> PseudonymisationResult:
     """Replace detected PII with consistent placeholders.

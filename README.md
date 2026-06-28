@@ -278,11 +278,15 @@ src/priveil/
 │   ├── prompts/         # System prompts as markdown files (refiner.md, assessor.md)
 │   ├── refiner.py       # Internal LLM refiner for mode='judge'
 │   └── assessor.py      # LLM assessor for POST /assess
+├── mcp/                 # Optional MCP server (pip install "priveil[mcp]")
+│   ├── server.py        # _State, lifespan, FastMCP instance
+│   └── tools.py         # detect/anonymise/assess tools
 ├── recognisers/         # AU-specific PatternRecognisers with checksum validation
-├── mcp.py               # MCP server (stdio) — exposes detect/anonymise/assess as tools
+├── settings.py          # Pydantic-settings, all vars prefixed PRIVEIL_
 └── app.py               # FastAPI app factory + lifespan
 
 tests/
 ├── unit/                # Pure function tests — no engine, no network
-└── integration/         # Full request→response via httpx AsyncClient
+├── integration/         # Full request→response via httpx AsyncClient
+└── mcp/                 # MCP tool tests
 ```
