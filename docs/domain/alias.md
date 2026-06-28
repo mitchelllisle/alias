@@ -23,7 +23,7 @@ Alias **does not produce anonymised data** in any mathematically rigorous sense.
 
 **Detection is incomplete by design.** There is no way to enumerate all possible identifying information. A phone number formatted unusually, a name that is also a common word, a combination of innocuous-looking fields — these may identify someone. Alias will miss them. Damien Desfontaines writes: *"Data is often more identifiable than it seems. Even a few innocuous-looking pieces of information can be enough to identify someone. And people tend to underestimate what data can be used to reidentify people in a dataset."*
 
-**Pseudonymisation is not anonymisation.** Replacing a name with `<PERSON>` preserves the structure of the original data. The `entity_map` returned by `/anonymise` records the original→replacement mapping — it is itself sensitive data. Anyone with access to both the pseudonymised text and the entity map can reconstruct the original. This is explicitly the first technique Desfontaines discusses as *failing* to protect privacy: *"'No longer obvious' is very different from 'impossible to figure out'."*
+**Pseudonymisation is not anonymisation.** Replacing a name with `<PERSON>` preserves the structure of the original data. The `entity_map` returned by `/anonymise` records the original PII spans as keys — it is sensitive data that must be treated with the same controls as the original text. Note that the map is not a complete reversal: placeholders are not positionally indexed, multiple spans may collapse to the same label (e.g. all names → `<PERSON>`), and the actual output for `mask`/`hash` operators is only an approximation. Even so, the map contains the real PII values and must be protected accordingly. This is explicitly the first technique Desfontaines discusses as *failing* to protect privacy: *"'No longer obvious' is very different from 'impossible to figure out'."*
 
 **Auxiliary data breaks it.** What looks like non-identifying data combined with an auxiliary dataset can become identifying. This is not a theoretical concern. The Massachusetts medical records case, the Netflix Prize dataset, and the AOL search query release were all "de-identified" by reasonable standards at the time. Each was re-identified using public data that data owners did not know attackers would possess.
 
@@ -77,7 +77,7 @@ Definition: The output of a Detection: a sorted tuple of Entities plus a SHA-256
 Definition: A presidio `EntityRecognizer` subclass — the atomic detection unit. Each recogniser is responsible for exactly one EntityType. Australian financial recognisers include checksum validation where the issuing authority publishes an algorithm (TFN, ABN, Medicare).
 
 **Pseudonymisation**
-Definition: What this service actually does. Detected entity spans are replaced with consistent labelled placeholders. The mapping from original to replacement is preserved in the `entity_map`. Re-identification is possible given the entity_map, the pseudonymised text, or auxiliary data about the individuals involved.
+Definition: What this service actually does. Detected entity spans are replaced with consistent labelled placeholders. The `entity_map` records the original PII spans as keys — it is sensitive data that must be treated with the same controls as the original text. Note: the map is not sufficient to reconstruct the full original document — placeholders are not positionally indexed, multiple distinct spans may collapse to the same label, and the map is explicitly approximate for `mask`/`hash` operators (where the exact output is not knowable before the engine runs). Re-identification risk comes primarily from the original PII values stored as keys, not from the ability to reverse the entire document.
 Alias / external term: Callers and documentation sometimes use "anonymisation" loosely. In this codebase, "anonymise" refers to the pseudonymisation operation. True anonymisation — where re-identification is mathematically infeasible — is explicitly out of scope.
 Not to be confused with: Anonymisation. The distinction matters legally (Privacy Act), technically, and ethically.
 
@@ -86,8 +86,7 @@ Definition: A named strategy for transforming a detected Entity span: `replace` 
 Note: Even `redact` (empty string) does not produce anonymous output — the structure of the text, the positions of other entities, and any undetected entities remain.
 
 **AnonymisationResult**
-Definition: The output of the pseudonymisation operation: the modified text string plus an `entity_map` that records the original span → replacement for audit purposes.
-The `entity_map` is sensitive data. It must be treated with the same access controls as the original text.
+Definition: The output of the pseudonymisation operation: the modified text string plus an `entity_map` that maps original PII spans to their replacement labels, for audit purposes. The map is an approximation for `mask` and `hash` operators — the exact transformed value is not knowable before the engine runs. The map is sensitive data (its keys are the original PII values) and must be protected with the same access controls as the original text.
 
 **Mode**
 Definition: A request-level switch controlling the speed/accuracy tradeoff: `fast` returns raw detector output; `accurate` runs an LLM refinement pass to remove false positives. Defaults to `accurate`; degrades silently to `fast` when no judge model is configured.
@@ -139,7 +138,7 @@ Does not own: any business logic — routes are thin wrappers over domain operat
 | Inbound | Any HTTP client | DetectionRequest, AnonymisationRequest, AssessmentRequest (JSON) |
 | Outbound | presidio-analyzer | Text + language → RecognizerResult list |
 | Outbound | presidio-anonymizer | RecognizerResult list + OperatorConfig map → pseudonymised text |
-| Outbound | LLM provider (Anthropic/OpenAI/Databricks) | Prompt + structured output schema → RefinerDecision / AssessmentDecision |
+| Outbound | LLM provider (built-in: Anthropic, OpenAI, Bedrock; custom: any OpenAI-compatible endpoint e.g. Databricks Serving Endpoints) | Prompt + structured output schema → RefinerDecision / AssessmentDecision |
 | Outbound | spaCy | Text → NLP pipeline (tokenisation, NER) |
 
 ---

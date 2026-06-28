@@ -19,7 +19,7 @@ A pseudonymisation service for Australian financial services — useful for redu
 
 The word "anonymise" appears throughout this codebase and documentation because it is the term practitioners use. It is not accurate, and that matters.
 
-What alias produces is **pseudonymisation**: detected entity spans are replaced with labelled placeholders (`<PERSON>`, `***-***-***`). The mapping from original to replacement is recorded in the `entity_map` returned by `/anonymise`. Anyone with that map — or with enough auxiliary data about the people involved — can reconstruct the original.
+What alias produces is **pseudonymisation**: detected entity spans are replaced with labelled placeholders (`<PERSON>`, `***-***-***`). The `entity_map` returned by `/anonymise` records the original PII spans as keys — it is sensitive data that must be protected with the same controls as the original text. (It is not a complete reconstruction of the original: placeholders are not positionally indexed and multiple spans may collapse to the same label, so the map is useful for audit but not sufficient to reverse the full document on its own.)
 
 Beyond that, no tool that works by finding and replacing known patterns can produce truly anonymous data, for three reasons that the privacy research literature has established clearly:
 
