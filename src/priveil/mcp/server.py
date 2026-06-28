@@ -41,9 +41,31 @@ class _State:
     executor: ThreadPoolExecutor
 
 
+def _require_spacy_model(model_name: str) -> None:
+    """Fail fast if the spaCy model is not installed.
+
+    The MCP server runs as a subprocess and must be ready immediately.
+    Blocking to download a model during the MCP handshake causes clients
+    to time out. Raise with a clear install command instead.
+
+    Args:
+        model_name: spaCy model name, e.g. 'en_core_web_sm'.
+
+    Raises:
+        SystemExit: If the model is not found, with an install hint.
+    """
+    import importlib.util
+    if importlib.util.find_spec(model_name.replace("-", "_")) is None:
+        raise SystemExit(
+            f"spaCy model '{model_name}' is not installed.\n"
+            f"Run: python -m spacy download {model_name}"
+        )
+
+
 @asynccontextmanager
 async def _lifespan(server: FastMCP) -> AsyncIterator[_State]:
     settings = Settings()
+    _require_spacy_model(settings.spacy_model)
     executor = ThreadPoolExecutor(max_workers=settings.executor_max_workers)
     engine = build_analyser_engine(
         spacy_model=settings.spacy_model,

@@ -212,14 +212,26 @@ The API is at `http://localhost:8000`. Interactive docs at `http://localhost:800
 
 Priveil exposes its tools over the [Model Context Protocol](https://modelcontextprotocol.io), so LLM clients (Claude Desktop, Cursor, etc.) can call `detect`, `anonymise`, and `assess` directly.
 
-**Claude Desktop** — add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+### Install
+
+```bash
+pip install "priveil[mcp]"
+
+# Pre-download the spaCy model — required before first use.
+# Without this the server downloads it on first start (~4s), which causes
+# MCP clients to time out before the server becomes ready.
+python -m spacy download en_core_web_sm
+```
+
+### Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "priveil": {
-      "command": "uv",
-      "args": ["run", "--project", "/path/to/priveil", "python", "-m", "priveil.mcp"],
+      "command": "priveil-mcp",
       "env": {
         "PRIVEIL_JUDGE_MODEL": "anthropic:claude-sonnet-4-6",
         "ANTHROPIC_API_KEY": "<your-key>"
@@ -236,7 +248,7 @@ Priveil exposes its tools over the [Model Context Protocol](https://modelcontext
 | `detect` | Detect PII entities — returns types, offsets, sensitivity, audit hash |
 | `anonymise` | Replace PII with placeholders — returns anonymised text and entity map |
 | `assess` | Risk profile a document — requires `PRIVEIL_JUDGE_MODEL` |
----
+
 
 ## Development
 
