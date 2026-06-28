@@ -51,7 +51,7 @@ def test_databricks_returns_openai_chat_model() -> None:
     assert isinstance(result, OpenAIChatModel)
 
 
-def test_custom_endpoint_model_name_preserved() -> None:
+def test_custom_endpoint_returns_openai_chat_model() -> None:
     from pydantic_ai.models.openai import OpenAIChatModel
 
     settings = _settings(
@@ -61,6 +61,7 @@ def test_custom_endpoint_model_name_preserved() -> None:
     )
     result = build_judge_model(settings)
     assert isinstance(result, OpenAIChatModel)
+    assert result.model_name == "my-deployment"
 
 
 # ── Validation ────────────────────────────────────────────────────────────────

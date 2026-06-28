@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.analyser = AsyncAnalyser(engine, executor)
     app.state.anonymiser = AsyncAnonymiser(AnonymizerEngine(), executor)  # type: ignore[no-untyped-call]
 
-    if settings.judge_model:
+    if settings.judge_model or settings.judge_base_url:
         from alias.judge.assessor import build_assessor_agent
         from alias.judge.refiner import build_refiner_agent
 

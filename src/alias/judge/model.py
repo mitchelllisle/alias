@@ -51,14 +51,23 @@ def build_judge_model(settings: "Settings") -> JudgeModel:
                 "ALIAS_JUDGE_API_KEY must be set when ALIAS_JUDGE_BASE_URL is configured "
                 "(e.g. a Databricks personal access token)."
             )
-        return _build_openai_compatible_model(settings)
+        model_name = settings.judge_model
+        assert model_name is not None  # validated at top of this function
+        return _build_openai_compatible_model(model_name=model_name, settings=settings)
 
     # Built-in provider — pydantic-ai resolves "anthropic:...", "openai:...", etc.
-    return settings.judge_model
+    model_name = settings.judge_model
+    assert model_name is not None  # validated at top of this function
+    return model_name
 
 
-def _build_openai_compatible_model(settings: "Settings") -> "OpenAIChatModel":
-    """Build an OpenAIChatModel for a custom OpenAI-compatible endpoint."""
+def _build_openai_compatible_model(model_name: str, settings: "Settings") -> "OpenAIChatModel":
+    """Build an OpenAIChatModel for a custom OpenAI-compatible endpoint.
+
+    Args:
+        model_name: Validated non-None deployment/model name.
+        settings: Application settings (for base_url and api_key).
+    """
     from openai import AsyncOpenAI
     from pydantic_ai.models.openai import OpenAIChatModel
     from pydantic_ai.providers.openai import OpenAIProvider
@@ -68,6 +77,6 @@ def _build_openai_compatible_model(settings: "Settings") -> "OpenAIChatModel":
         api_key=settings.judge_api_key,
     )
     return OpenAIChatModel(
-        model_name=settings.judge_model,  # type: ignore[arg-type]
+        model_name=model_name,
         provider=OpenAIProvider(openai_client=client),
     )
