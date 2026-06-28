@@ -68,7 +68,9 @@ async def anonymise(
     detections = await state.analyser.analyse(DetectionRequest(text=text, mode=mode))
     if mode == "judge" and state.refiner is not None:
         detections = await _refine(detections, text, state.refiner)
-    # OperatorType is a Literal alias; cast validates intent without runtime overhead.
+    _VALID_OPERATORS = {"replace", "mask", "redact", "hash"}
+    if invalid := {v for v in (operator_overrides or {}).values() if v not in _VALID_OPERATORS}:
+        raise ValueError(f"Invalid operator(s): {invalid}. Must be one of {_VALID_OPERATORS}.")
     overrides = {k: cast(OperatorType, v) for k, v in (operator_overrides or {}).items()}
     return await state.pseudonymiser.pseudonymise(
         PseudonymisationRequest(

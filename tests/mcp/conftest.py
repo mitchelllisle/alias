@@ -6,6 +6,7 @@ SimpleNamespace — just enough to satisfy _state(ctx); no MagicMock needed.
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 from typing import Any
@@ -20,20 +21,25 @@ from priveil.recognisers.registry import build_recognisers
 
 
 @pytest.fixture(scope="session")
-def engine_state() -> _State:
-    """Real analyser + pseudonymiser, no judge model."""
+def engine_state() -> Generator[_State, None, None]:
+    """Real analyser + pseudonymiser, no judge model.
+
+    Session-scoped so spaCy loads once. Executor is shut down on teardown.
+    """
     executor = ThreadPoolExecutor(max_workers=2)
     engine = build_analyser_engine(
         spacy_model="en_core_web_sm",
         extra_recognisers=build_recognisers(),
     )
-    return _State(
+    state = _State(
         analyser=AsyncAnalyser(engine, executor),
         pseudonymiser=AsyncPseudonymiser(AnonymizerEngine(), executor),  # type: ignore[no-untyped-call]
         refiner=None,
         assessor=None,
         executor=executor,
     )
+    yield state
+    executor.shutdown(wait=True)
 
 
 def make_ctx(state: _State) -> Any:
