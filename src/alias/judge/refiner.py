@@ -5,8 +5,14 @@ to remove false positives and surface false negatives, returns a cleaned
 DetectionResult with the same schema.
 """
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from alias.settings import Settings
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
@@ -112,13 +118,14 @@ def _apply_decision(decision: RefinerDecision, request: JudgementRequest) -> Jud
     return JudgementResult(adjusted=adjusted, removed=removed, added=added, reasoning=decision.reasoning)
 
 
-def build_refiner_agent(model: str, temperature: float = 0.0) -> Agent[None, RefinerDecision]:
-    """Build the internal refiner agent."""
+def build_refiner_agent(settings: Settings) -> Agent[None, RefinerDecision]:
+    """Build the internal refiner agent from application settings."""
+    from alias.judge.model import build_judge_model
     return Agent(
-        model=model,
+        model=build_judge_model(settings),
         output_type=RefinerDecision,
         system_prompt=REFINER_SYSTEM_PROMPT,
-        model_settings={"temperature": temperature},
+        model_settings={"temperature": settings.judge_temperature},
     )
 
 

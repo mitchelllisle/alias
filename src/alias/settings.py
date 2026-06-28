@@ -23,3 +23,8 @@ class Settings(BaseSettings):
     # When unset: mode='accurate' degrades silently to 'fast'; /assess returns 503.
     judge_model: str | None = None
     judge_temperature: float = 0.0
+    # Custom OpenAI-compatible endpoint (e.g. Databricks Serving Endpoints).
+    # When set, judge_model is the deployment name and judge_api_key is required.
+    # When unset, judge_model uses pydantic-ai's provider:model string (e.g. anthropic:...).
+    judge_base_url: str | None = None
+    judge_api_key: str | None = None

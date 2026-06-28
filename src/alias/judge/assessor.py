@@ -4,10 +4,15 @@ Produces a risk profile of a piece of text: sensitivity tier, regulatory
 exposure, and handling guidance. Separate from the internal refiner.
 """
 
+from __future__ import annotations
+
 import json
 from collections import Counter
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:
+    from alias.settings import Settings
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
@@ -77,13 +82,14 @@ def _entity_breakdown(detections: DetectionResult) -> list[EntityBreakdown]:
     ]
 
 
-def build_assessor_agent(model: str, temperature: float = 0.0) -> Agent[None, AssessmentDecision]:
-    """Build the assessor agent."""
+def build_assessor_agent(settings: Settings) -> Agent[None, AssessmentDecision]:
+    """Build the assessor agent from application settings."""
+    from alias.judge.model import build_judge_model
     return Agent(
-        model=model,
+        model=build_judge_model(settings),
         output_type=AssessmentDecision,
         system_prompt=ASSESSOR_SYSTEM_PROMPT,
-        model_settings={"temperature": temperature},
+        model_settings={"temperature": settings.judge_temperature},
     )
 
 

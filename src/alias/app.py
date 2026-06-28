@@ -28,8 +28,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         from alias.judge.assessor import build_assessor_agent
         from alias.judge.refiner import build_refiner_agent
 
-        app.state.refiner = build_refiner_agent(settings.judge_model, settings.judge_temperature)
-        app.state.assessor = build_assessor_agent(settings.judge_model, settings.judge_temperature)
+        app.state.refiner = build_refiner_agent(settings)
+        app.state.assessor = build_assessor_agent(settings)
     else:
         app.state.refiner = None
         app.state.assessor = None
