@@ -11,9 +11,6 @@ install: ## Install all dependencies
 install-docs: ## Install docs dependencies
 	uv sync --group docs
 
-docs-deploy: ## Deploy docs to GitHub Pages
-	$(shell uv python find) -m mkdocs gh-deploy --force
-
 serve: ## Run the server locally with hot-reload
 	uv run uvicorn priveil.app:app --reload --host 0.0.0.0 --port 8000
 
