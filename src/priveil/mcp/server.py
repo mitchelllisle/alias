@@ -60,7 +60,7 @@ async def _lifespan(server: FastMCP) -> AsyncIterator[_State]:
 
     state = _State(
         analyser=AsyncAnalyser(engine, executor),
-        pseudonymiser=AsyncPseudonymiser(AnonymizerEngine(), executor),  # type: ignore[no-untyped-call]
+        pseudonymiser=AsyncPseudonymiser(AnonymizerEngine(), executor),  # type: ignore[no-untyped-call]  # conduit: presidio untyped
         refiner=refiner,
         assessor=assessor,
         executor=executor,
@@ -74,7 +74,7 @@ async def _lifespan(server: FastMCP) -> AsyncIterator[_State]:
 mcp = FastMCP("priveil", lifespan=_lifespan)
 
 
-def get_state(ctx: Context) -> _State:  # type: ignore[type-arg]
+def get_state(ctx: Context) -> _State:  # type: ignore[type-arg]  # conduit: FastMCP Context not generic at runtime
     """Extract typed engine state from the FastMCP request context.
 
     Args:

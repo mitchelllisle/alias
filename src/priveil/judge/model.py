@@ -46,14 +46,18 @@ def build_judge_model(settings: "Settings") -> JudgeModel:
         )
 
     if settings.judge_base_url:
-        if not settings.judge_api_key:
+        if settings.judge_api_key is None:
             raise ValueError(
                 "PRIVEIL_JUDGE_API_KEY must be set when PRIVEIL_JUDGE_BASE_URL is configured "
                 "(e.g. a Databricks personal access token)."
             )
         model_name = settings.judge_model
         assert model_name is not None  # validated at top of this function
-        return _build_openai_compatible_model(model_name=model_name, settings=settings)
+        return _build_openai_compatible_model(
+            model_name=model_name,
+            base_url=settings.judge_base_url,
+            api_key=settings.judge_api_key.get_secret_value(),
+        )
 
     # Built-in provider — pydantic-ai resolves "anthropic:...", "openai:...", etc.
     model_name = settings.judge_model
@@ -61,21 +65,19 @@ def build_judge_model(settings: "Settings") -> JudgeModel:
     return model_name
 
 
-def _build_openai_compatible_model(model_name: str, settings: "Settings") -> "OpenAIChatModel":
+def _build_openai_compatible_model(model_name: str, base_url: str | None, api_key: str) -> "OpenAIChatModel":
     """Build an OpenAIChatModel for a custom OpenAI-compatible endpoint.
 
     Args:
-        model_name: Validated non-None deployment/model name.
-        settings: Application settings (for base_url and api_key).
+        model_name: Validated deployment/model name.
+        base_url: The endpoint base URL.
+        api_key: Bearer token, already extracted from SecretStr by the caller.
     """
     from openai import AsyncOpenAI
     from pydantic_ai.models.openai import OpenAIChatModel
     from pydantic_ai.providers.openai import OpenAIProvider
 
-    client = AsyncOpenAI(
-        base_url=settings.judge_base_url,
-        api_key=settings.judge_api_key,
-    )
+    client = AsyncOpenAI(base_url=base_url, api_key=api_key)
     return OpenAIChatModel(
         model_name=model_name,
         provider=OpenAIProvider(openai_client=client),

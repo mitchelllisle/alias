@@ -23,7 +23,7 @@ PseudonymiserDep = Annotated[AsyncPseudonymiser, Depends(_get_pseudonymiser)]
 
 
 def _get_refiner(request: Request) -> "Agent[None, RefinerDecision] | None":
-    return request.app.state.refiner  # type: ignore[no-any-return]
+    return request.app.state.refiner  # type: ignore[no-any-return]  # conduit: app.state is untyped by FastAPI
 
 
 # Optional — routes silently skip refinement when this is None.
@@ -37,7 +37,7 @@ def _get_assessor(request: Request) -> "Agent[None, AssessmentDecision]":
             status_code=503,
             detail="Assessment not available — set PRIVEIL_JUDGE_MODEL to enable",
         )
-    return agent  # type: ignore[no-any-return]
+    return agent  # type: ignore[no-any-return]  # conduit: app.state is untyped by FastAPI
 
 
 AssessorDep = Annotated["Agent[None, AssessmentDecision]", Depends(_get_assessor)]

@@ -1,3 +1,4 @@
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -27,4 +28,4 @@ class Settings(BaseSettings):
     # When set, judge_model is the deployment name and judge_api_key is required.
     # When unset, judge_model uses pydantic-ai's provider:model string (e.g. anthropic:...).
     judge_base_url: str | None = None
-    judge_api_key: str | None = None
+    judge_api_key: SecretStr | None = None

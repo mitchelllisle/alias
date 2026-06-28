@@ -21,7 +21,7 @@ from priveil.mcp.server import get_state, mcp
 @mcp.tool()
 async def detect(
     text: str,
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,  # type: ignore[type-arg]  # conduit: FastMCP Context not generic at runtime
     mode: Literal["fast", "judge"] = "judge",
 ) -> DetectionResult:
     """Detect PII entities in text.
@@ -46,7 +46,7 @@ async def detect(
 @mcp.tool()
 async def anonymise(
     text: str,
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,  # type: ignore[type-arg]  # conduit: FastMCP Context not generic at runtime
     mode: Literal["fast", "judge"] = "judge",
     operator_overrides: dict[str, str] | None = None,
 ) -> PseudonymisationResult:
@@ -85,7 +85,7 @@ async def anonymise(
 @mcp.tool()
 async def assess(
     text: str,
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,  # type: ignore[type-arg]  # conduit: FastMCP Context not generic at runtime
     context: str | None = None,
 ) -> AssessmentResult:
     """Assess the sensitivity and regulatory risk of text.

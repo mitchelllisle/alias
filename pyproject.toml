@@ -1,6 +1,6 @@
 [project]
 name = "priveil"
-version = "0.1.1"
+version = "0.2.0"
 description = "Pseudonymisation service for Australian financial services"
 authors = [
     {name = "Mitchell Lisle", email = "m.lisle90@gmail.com"}
@@ -46,6 +46,7 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0,<8",
     "httpx>=0.28.1",
+    "hypothesis>=6.155.7",
 ]
 docs = [
     "mkdocs>=1.6.1",

@@ -46,6 +46,15 @@ ASSESSOR_SYSTEM_PROMPT: str = (_PROMPTS_DIR / "assessor.md").read_text(encoding=
 
 
 def _build_assessment_prompt(request: AssessmentRequest, detections: DetectionResult) -> str:
+    """Build the LLM prompt for the assessor agent.
+
+    Args:
+        request: The assessment request, including text and optional context hint.
+        detections: Pre-computed detections; only PII entities are included in the prompt.
+
+    Returns:
+        Formatted prompt string ready to pass to the assessor agent.
+    """
     entities_json = json.dumps(
         [
             {
