@@ -65,7 +65,7 @@ def build_judge_model(settings: "Settings") -> JudgeModel:
     return model_name
 
 
-def _build_openai_compatible_model(model_name: str, base_url: str | None, api_key: str) -> "OpenAIChatModel":
+def _build_openai_compatible_model(model_name: str, base_url: str, api_key: str) -> "OpenAIChatModel":
     """Build an OpenAIChatModel for a custom OpenAI-compatible endpoint.
 
     Args:

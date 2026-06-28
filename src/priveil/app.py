@@ -13,6 +13,14 @@ from priveil.recognisers.registry import build_recognisers
 from priveil.settings import Settings
 
 
+def _version() -> str:
+    """Return the package version, falling back to 'dev' for source checkouts."""
+    try:
+        return importlib.metadata.version("priveil")
+    except importlib.metadata.PackageNotFoundError:
+        return "dev"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Startup / shutdown hook — initialise engines, yield, then clean up."""
@@ -54,7 +62,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(
         title="Priveil",
         description="Pseudonymisation service for Australian financial services",
-        version=importlib.metadata.version("priveil"),
+        version=_version(),
         lifespan=lifespan,
     )
     app.state.settings = settings
