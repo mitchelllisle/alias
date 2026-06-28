@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     spacy_model: str = "en_core_web_sm"
     executor_max_workers: int = 4
     # LLM judge — set ALIAS_JUDGE_MODEL to enable refinement and /assess.
-    # When unset: mode='accurate' degrades silently to 'fast'; /assess returns 503.
+    # When unset: mode='judge' degrades silently to 'fast'; /assess returns 503.
     judge_model: str | None = None
     judge_temperature: float = 0.0
     # Custom OpenAI-compatible endpoint (e.g. Databricks Serving Endpoints).

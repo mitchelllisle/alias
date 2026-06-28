@@ -57,7 +57,7 @@ curl -X POST http://localhost:8000/detect \
   -H "Content-Type: application/json" \
   -d '{
     "text": "Jane Smith TFN 123 456 782, BSB 062-000, jane@westpac.com.au",
-    "mode": "accurate"
+    "mode": "judge"
   }'
 ```
 
@@ -73,11 +73,11 @@ curl -X POST http://localhost:8000/detect \
 }
 ```
 
-**`mode` field** (default `"accurate"`):
+**`mode` field** (default `"judge"`):
 
 | Value | Behaviour |
 |-------|-----------|
-| `"accurate"` | Runs an LLM pass to remove false positives before returning. Requires `ALIAS_JUDGE_MODEL`. Degrades silently to `"fast"` when unconfigured. |
+| `"judge"` | Runs an LLM pass to remove false positives before returning. Requires `ALIAS_JUDGE_MODEL`. Degrades silently to `"fast"` when unconfigured. |
 | `"fast"` | Returns raw detector output immediately. No LLM involvement. |
 
 ### `POST /anonymise`
@@ -89,7 +89,7 @@ curl -X POST http://localhost:8000/anonymise \
   -H "Content-Type: application/json" \
   -d '{
     "text": "Jane Smith TFN 123 456 782",
-    "mode": "accurate"
+    "mode": "judge"
   }'
 ```
 
@@ -184,7 +184,7 @@ Copy `.env.example` to `.env` and set values.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ALIAS_JUDGE_MODEL` | _(unset)_ | LLM for `mode='accurate'` and `/assess`. Format: `provider:model`, e.g. `anthropic:claude-sonnet-4-6` |
+| `ALIAS_JUDGE_MODEL` | _(unset)_ | LLM for `mode='judge'` and `/assess`. Format: `provider:model`, e.g. `anthropic:claude-sonnet-4-6` |
 | `ALIAS_JUDGE_TEMPERATURE` | `0.0` | Sampling temperature for the LLM judge |
 | `ALIAS_SPACY_MODEL` | `en_core_web_sm` | spaCy model. Use `en_core_web_lg` for higher recall in production |
 | `ALIAS_EXECUTOR_MAX_WORKERS` | `4` | Thread-pool size for presidio (CPU-bound) |
@@ -246,7 +246,7 @@ src/alias/
 ├── engine/              # Async wrappers over presidio analyser and anonymiser
 ├── judge/
 │   ├── prompts/         # System prompts as markdown files (refiner.md, assessor.md)
-│   ├── refiner.py       # Internal LLM refiner for mode='accurate'
+│   ├── refiner.py       # Internal LLM refiner for mode='judge'
 │   └── assessor.py      # LLM assessor for POST /assess
 ├── recognisers/         # AU-specific PatternRecognisers with checksum validation
 ├── settings.py          # Pydantic-settings, all vars prefixed ALIAS_

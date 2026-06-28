@@ -29,7 +29,7 @@ Alias **does not produce anonymised data** in any mathematically rigorous sense.
 
 **Attacks improve over time.** Mitigating known attacks is not enough. New techniques — including AI-powered reconstruction attacks — continually lower the bar for re-identification. A dataset that is safe today may not be safe in five years.
 
-**The LLM refiner does not change this picture.** Mode `accurate` uses an LLM to remove false positives and surface missed entities. This improves operational precision but does not change the fundamental guarantee — the system still cannot enumerate all possible identifying information, and the LLM introduces its own uncertainties (hallucination, prompt sensitivity, non-determinism across versions).
+**The LLM refiner does not change this picture.** Mode `judge` uses an LLM to remove false positives and surface missed entities. This improves operational precision but does not change the fundamental guarantee — the system still cannot enumerate all possible identifying information, and the LLM introduces its own uncertainties (hallucination, prompt sensitivity, non-determinism across versions).
 
 ### What this means for callers
 
@@ -89,7 +89,7 @@ Note: Even `redact` (empty string) does not produce anonymous output — the str
 Definition: The output of the pseudonymisation operation: the modified text string plus an `entity_map` that maps original PII spans to their replacement labels, for audit purposes. The map is an approximation for `mask` and `hash` operators — the exact transformed value is not knowable before the engine runs. The map is sensitive data (its keys are the original PII values) and must be protected with the same access controls as the original text.
 
 **Mode**
-Definition: A request-level switch controlling the speed/accuracy tradeoff: `fast` returns raw detector output; `accurate` runs an LLM refinement pass to remove false positives. Defaults to `accurate`; degrades silently to `fast` when no judge model is configured.
+Definition: A request-level switch controlling the speed/accuracy tradeoff: `fast` returns raw detector output; `judge` runs an LLM refinement pass to remove false positives. Defaults to `judge`; degrades silently to `fast` when no judge model is configured.
 Not to be confused with: A global server setting. Mode is per-request.
 
 **Refiner**
@@ -150,7 +150,7 @@ Triggered by: a call to `/detect` or the internal detection step in `/anonymise`
 Downstream: DetectionResult returned; optionally passed to Refiner or Assessor.
 
 **DetectionRefined**
-Triggered by: Mode = `accurate` and a judge model is configured.
+Triggered by: Mode = `judge` and a judge model is configured.
 Downstream: Cleaned DetectionResult replaces the raw result before the API response is sent. Does not change the fundamental incompleteness of detection.
 
 **TextPseudonymised**
@@ -168,7 +168,7 @@ Downstream: AssessmentResult returned; caller uses sensitivity tier and regulato
 **Decision: Presidio as the detection core, not a fine-tuned model**
 Context: Detection needs to be fast, deterministic, explainable, and auditable. LLMs add latency and non-determinism as the primary detection mechanism.
 Decision: Presidio (rule-based + NER) handles all entity recognition. LLM is additive — refinement and assessment only, never on the critical detection path.
-Consequences: High precision on Australian financial identifiers via checksum validation. Recall on edge cases handled by Mode = `accurate`. No LLM dependency for core functionality.
+Consequences: High precision on Australian financial identifiers via checksum validation. Recall on edge cases handled by Mode = `judge`. No LLM dependency for core functionality.
 
 **Decision: Australian financial entity types are explicit in the enum, not inferred**
 Context: Generic spaCy/presidio models do not reliably surface TFN, ABN, BSB, Medicare card numbers.
@@ -180,10 +180,10 @@ Context: The research literature is unambiguous that pattern-based de-identifica
 Decision: This service is explicitly scoped to **operational pseudonymisation** — reducing obvious PII exposure in systems that handle financial text. It does not claim to produce anonymised data. The name "Alias" and the term "pseudonymisation" are used throughout to signal this scope. True anonymisation is out of scope.
 Consequences: Callers who need data that is safe to publish or share without privacy controls must use differential privacy, not this service. The `entity_map` must be treated as sensitive. The service is useful and valuable within its stated scope — preventing accidental PII exposure, meeting process requirements, improving compliance posture — without overclaiming.
 
-**Decision: Mode (fast/accurate) is per-request, not a server-side global**
+**Decision: Mode (fast/judge) is per-request, not a server-side global**
 Context: Some callers need throughput (batch jobs); others need accuracy (interactive, compliance-sensitive).
-Decision: `mode` is a field on DetectionRequest and AnonymisationRequest. `accurate` is the default. The LLM is only invoked when mode = `accurate` and a judge model is configured.
-Consequences: Callers opt out explicitly by setting `mode: fast`. When ALIAS_JUDGE_MODEL is unset, accurate silently degrades to fast — no config change required on the client side.
+Decision: `mode` is a field on DetectionRequest and AnonymisationRequest. `judge` is the default. The LLM is only invoked when mode = `judge` and a judge model is configured.
+Consequences: Callers opt out explicitly by setting `mode: fast`. When ALIAS_JUDGE_MODEL is unset, judge silently degrades to fast — no config change required on the client side.
 
 **Decision: Refiner is internal; Assessment is the only LLM-facing endpoint**
 Context: Exposing an endpoint that lets callers "judge" detector accuracy couples them to an internal implementation detail and reveals that AI is involved in routine detection.
@@ -202,7 +202,7 @@ Consequences: Near-zero false positives on AU financial identifiers in structure
 **What "good" looks like:**
 - A TFN, BSB, or Medicare number in any realistic Australian financial document is detected and pseudonymised correctly, without the caller writing any detection logic.
 - Clean financial text (interest rates, loan amounts, product codes) produces zero entities — no noise that burdens downstream systems.
-- Mode = `accurate` removes the false positives that pattern matching alone cannot; mode = `fast` is suitable for high-volume preprocessing where a small FP rate is acceptable.
+- Mode = `judge` removes the false positives that pattern matching alone cannot; mode = `fast` is suitable for high-volume preprocessing where a small FP rate is acceptable.
 - Callers understand what they have and have not received. A caller who receives a pseudonymised document knows they still have sensitive data that requires appropriate controls.
 - The service adds no friction to callers who don't want the LLM — `ALIAS_JUDGE_MODEL` unset means the service runs purely on presidio with no degraded behaviour, just no LLM features.
 

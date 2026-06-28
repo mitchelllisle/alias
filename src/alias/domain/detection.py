@@ -13,10 +13,10 @@ class DetectionRequest(BaseModel, frozen=True):
     # Only English is supported in the current engine configuration.
     # Expand this Literal when multi-language support is added.
     language: Literal["en"] = Field(default="en", description="ISO 639-1 language code")
-    mode: Literal["fast", "accurate"] = Field(
-        default="accurate",
+    mode: Literal["fast", "judge"] = Field(
+        default="judge",
         description=(
-            "'accurate' runs an LLM pass to remove false positives (slower). "
+            "'judge' runs an LLM pass to remove false positives (slower). "
             "'fast' skips the LLM and returns raw detector output. "
             "No-ops to 'fast' when no judge model is configured."
         ),

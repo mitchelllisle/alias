@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException, Request
 from pydantic_ai import Agent
 
 from alias.engine.analyser import AsyncAnalyser
-from alias.engine.anonymiser import AsyncAnonymiser
+from alias.engine.pseudonymiser import AsyncPseudonymiser
 from alias.judge.assessor import AssessmentDecision
 from alias.judge.refiner import RefinerDecision
 
@@ -15,11 +15,11 @@ def _get_analyser(request: Request) -> AsyncAnalyser:
 
 AnalyserDep = Annotated[AsyncAnalyser, Depends(_get_analyser)]
 
-def _get_anonymiser(request: Request) -> AsyncAnonymiser:
-    return cast(AsyncAnonymiser, request.app.state.anonymiser)
+def _get_pseudonymiser(request: Request) -> AsyncPseudonymiser:
+    return cast(AsyncPseudonymiser, request.app.state.pseudonymiser)
 
 
-AnonymiserDep = Annotated[AsyncAnonymiser, Depends(_get_anonymiser)]
+PseudonymiserDep = Annotated[AsyncPseudonymiser, Depends(_get_pseudonymiser)]
 
 
 def _get_refiner(request: Request) -> "Agent[None, RefinerDecision] | None":

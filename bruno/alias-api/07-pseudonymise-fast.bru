@@ -1,11 +1,11 @@
 meta {
-  name: Anonymise (Accurate)
+  name: Pseudonymise (Fast)
   type: http
-  seq: 6
+  seq: 7
 }
 
 post {
-  url: {{baseUrl}}/anonymise
+  url: {{baseUrl}}/pseudonymise
   body: json
   auth: none
 }
@@ -18,6 +18,6 @@ headers {
 body:json {
   {
     "text": "Please contact Alice Smith at alice@example.com and use BSB 062-000.",
-    "mode": "accurate"
+    "mode": "fast"
   }
 }

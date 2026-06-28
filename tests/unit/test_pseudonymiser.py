@@ -1,15 +1,15 @@
-"""Unit tests for the async anonymiser engine.
+"""Unit tests for the async pseudonymiser engine.
 
 Pure functions (_build_entity_map, _expected_replacement, _to_recognizer_result)
-are tested directly. AsyncAnonymiser is tested against the real presidio engine.
+are tested directly. AsyncPseudonymiser is tested against the real presidio engine.
 No mocks.
 """
 
 from presidio_anonymizer.entities import OperatorConfig
 
 from alias.domain.entities import ENTITY_CLASSIFICATION, Entity, EntityType
-from alias.engine.anonymiser import (
-    AsyncAnonymiser,
+from alias.engine.pseudonymiser import (
+    AsyncPseudonymiser,
     _build_entity_map,
     _build_operators,
     _expected_replacement,
@@ -106,81 +106,81 @@ def test_build_operators_override_replace_has_new_value() -> None:
     assert operators["PERSON"].params["new_value"] == "<PERSON>"
 
 
-# ── AsyncAnonymiser ───────────────────────────────────────────────────────────
+# ── AsyncPseudonymiser ────────────────────────────────────────────────────────
 
-async def test_anonymise_replaces_email(anonymiser: AsyncAnonymiser) -> None:
-    from alias.domain.anonymisation import AnonymisationRequest
+async def test_pseudonymise_replaces_email(pseudonymiser: AsyncPseudonymiser) -> None:
     from alias.domain.detection import DetectionResult
+    from alias.domain.pseudonymisation import PseudonymisationRequest
 
     entity = _entity(EntityType.EMAIL_ADDRESS, "jane@example.com", start=12)
     detections = DetectionResult.from_text("Send email to jane@example.com", [entity])
-    req = AnonymisationRequest(text="Send email to jane@example.com", detections=detections)
-    result = await anonymiser.anonymise(req)
+    req = PseudonymisationRequest(text="Send email to jane@example.com", detections=detections)
+    result = await pseudonymiser.pseudonymise(req)
     assert "jane@example.com" not in result.anonymised_text
     assert "<EMAIL>" in result.anonymised_text
 
 
-async def test_anonymise_replaces_tfn(anonymiser: AsyncAnonymiser) -> None:
-    from alias.domain.anonymisation import AnonymisationRequest
+async def test_pseudonymise_replaces_tfn(pseudonymiser: AsyncPseudonymiser) -> None:
     from alias.domain.detection import DetectionResult
+    from alias.domain.pseudonymisation import PseudonymisationRequest
 
     entity = _entity(EntityType.AU_TFN, "123 456 782", start=7)
     detections = DetectionResult.from_text("TFN is 123 456 782", [entity])
-    req = AnonymisationRequest(text="TFN is 123 456 782", detections=detections)
-    result = await anonymiser.anonymise(req)
+    req = PseudonymisationRequest(text="TFN is 123 456 782", detections=detections)
+    result = await pseudonymiser.pseudonymise(req)
     assert "123 456 782" not in result.anonymised_text
     assert "***-***-***" in result.anonymised_text
 
 
-async def test_anonymise_operator_override_redact(anonymiser: AsyncAnonymiser) -> None:
-    from alias.domain.anonymisation import AnonymisationRequest
+async def test_pseudonymise_operator_override_redact(pseudonymiser: AsyncPseudonymiser) -> None:
     from alias.domain.detection import DetectionResult
+    from alias.domain.pseudonymisation import PseudonymisationRequest
 
     entity = _entity(EntityType.PERSON, "Jane Smith", start=8)
     detections = DetectionResult.from_text("Contact Jane Smith today", [entity])
-    req = AnonymisationRequest(
+    req = PseudonymisationRequest(
         text="Contact Jane Smith today",
         detections=detections,
         operator_overrides={"PERSON": "redact"},
     )
-    result = await anonymiser.anonymise(req)
+    result = await pseudonymiser.pseudonymise(req)
     assert "Jane Smith" not in result.anonymised_text
 
 
-async def test_anonymise_operator_override_mask(anonymiser: AsyncAnonymiser) -> None:
-    from alias.domain.anonymisation import AnonymisationRequest
+async def test_pseudonymise_operator_override_mask(pseudonymiser: AsyncPseudonymiser) -> None:
     from alias.domain.detection import DetectionResult
+    from alias.domain.pseudonymisation import PseudonymisationRequest
 
     text = "My TFN is 123 456 782"
     entity = _entity(EntityType.AU_TFN, "123 456 782", start=10)
     detections = DetectionResult.from_text(text, [entity])
-    req = AnonymisationRequest(
+    req = PseudonymisationRequest(
         text=text,
         detections=detections,
         operator_overrides={"AU_TFN": "mask"},
     )
-    result = await anonymiser.anonymise(req)
+    result = await pseudonymiser.pseudonymise(req)
     assert "123 456 782" not in result.anonymised_text
 
 
-async def test_anonymise_no_entities_text_unchanged(anonymiser: AsyncAnonymiser) -> None:
-    from alias.domain.anonymisation import AnonymisationRequest
+async def test_pseudonymise_no_entities_text_unchanged(pseudonymiser: AsyncPseudonymiser) -> None:
     from alias.domain.detection import DetectionResult
+    from alias.domain.pseudonymisation import PseudonymisationRequest
 
     text = "Interest rate is 5.5% per annum."
     detections = DetectionResult.from_text(text, [])
-    req = AnonymisationRequest(text=text, detections=detections)
-    result = await anonymiser.anonymise(req)
+    req = PseudonymisationRequest(text=text, detections=detections)
+    result = await pseudonymiser.pseudonymise(req)
     assert result.anonymised_text == text
 
 
-async def test_anonymise_entity_map_populated(anonymiser: AsyncAnonymiser) -> None:
-    from alias.domain.anonymisation import AnonymisationRequest
+async def test_pseudonymise_entity_map_populated(pseudonymiser: AsyncPseudonymiser) -> None:
     from alias.domain.detection import DetectionResult
+    from alias.domain.pseudonymisation import PseudonymisationRequest
 
     entity = _entity(EntityType.AU_BSB, "062-000", start=4)
     detections = DetectionResult.from_text("BSB 062-000", [entity])
-    req = AnonymisationRequest(text="BSB 062-000", detections=detections)
-    result = await anonymiser.anonymise(req)
+    req = PseudonymisationRequest(text="BSB 062-000", detections=detections)
+    result = await pseudonymiser.pseudonymise(req)
     assert "062-000" in result.entity_map
     assert result.entity_map["062-000"] == "XXX-XXX"

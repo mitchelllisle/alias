@@ -1,11 +1,11 @@
 meta {
-  name: Anonymise (Operator Overrides)
+  name: Pseudonymise (Operator Overrides)
   type: http
   seq: 9
 }
 
 post {
-  url: {{baseUrl}}/anonymise
+  url: {{baseUrl}}/pseudonymise
   body: json
   auth: none
 }
@@ -22,6 +22,6 @@ body:json {
       "AU_TFN": "mask",
       "EMAIL_ADDRESS": "hash"
     },
-    "mode": "accurate"
+    "mode": "judge"
   }
 }

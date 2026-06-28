@@ -8,7 +8,7 @@ from pydantic_ai.models.test import TestModel
 
 from alias.app import create_app
 from alias.engine.analyser import AsyncAnalyser, build_analyser_engine
-from alias.engine.anonymiser import AsyncAnonymiser
+from alias.engine.pseudonymiser import AsyncPseudonymiser
 from alias.judge.assessor import AssessmentDecision
 from alias.judge.refiner import RefinerDecision
 from alias.recognisers.registry import build_recognisers
@@ -36,11 +36,11 @@ def analyser(test_settings: Settings) -> Generator[AsyncAnalyser, None, None]:
 
 
 @pytest.fixture(scope="session")
-def anonymiser() -> Generator[AsyncAnonymiser, None, None]:
+def pseudonymiser() -> Generator[AsyncPseudonymiser, None, None]:
     """Build the AnonymizerEngine once per session."""
     from presidio_anonymizer import AnonymizerEngine
     executor = ThreadPoolExecutor(max_workers=2)
-    yield AsyncAnonymiser(AnonymizerEngine(), executor)
+    yield AsyncPseudonymiser(AnonymizerEngine(), executor)
     executor.shutdown(wait=True)
 
 
@@ -76,15 +76,15 @@ async def detect_client(test_settings: Settings, analyser: AsyncAnalyser) -> Asy
 
 
 @pytest.fixture
-async def anonymise_client(
+async def pseudonymise_client(
     test_settings: Settings,
     analyser: AsyncAnalyser,
-    anonymiser: AsyncAnonymiser,
+    pseudonymiser: AsyncPseudonymiser,
 ) -> AsyncGenerator[AsyncClient, None]:
-    """Analyser + anonymiser, no refiner."""
+    """Analyser + pseudonymiser, no refiner."""
     app = create_app(settings=test_settings)
     app.state.analyser = analyser
-    app.state.anonymiser = anonymiser
+    app.state.pseudonymiser = pseudonymiser
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
 
@@ -93,13 +93,13 @@ async def anonymise_client(
 async def refined_client(
     test_settings: Settings,
     analyser: AsyncAnalyser,
-    anonymiser: AsyncAnonymiser,
+    pseudonymiser: AsyncPseudonymiser,
     refiner_agent: Agent[None, RefinerDecision],
 ) -> AsyncGenerator[AsyncClient, None]:
-    """Analyser + anonymiser + TestModel refiner — tests the refine path."""
+    """Analyser + pseudonymiser + TestModel refiner — tests the refine path."""
     app = create_app(settings=test_settings)
     app.state.analyser = analyser
-    app.state.anonymiser = anonymiser
+    app.state.pseudonymiser = pseudonymiser
     app.state.refiner = refiner_agent
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c

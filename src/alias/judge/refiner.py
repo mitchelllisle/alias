@@ -1,4 +1,4 @@
-"""Internal LLM refiner for /detect and /anonymise.
+"""Internal LLM refiner for /detect and /pseudonymise.
 
 Not part of the public API surface. Takes a DetectionResult, asks the LLM
 to remove false positives and surface false negatives, returns a cleaned
@@ -136,7 +136,7 @@ async def refine(
 ) -> DetectionResult:
     """Run the LLM refiner and return cleaned detections.
 
-    Used internally by /detect and /anonymise when mode='accurate'.
+    Used internally by /detect and /pseudonymise when mode='judge'.
     """
     req = JudgementRequest(text=text, detections=detections)
     prompt = _build_refiner_prompt(req)

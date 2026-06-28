@@ -1,7 +1,7 @@
 """Internal refinement domain types.
 
 Not exposed on the API surface — used by the refiner to clean detections
-before they are returned from /detect and /anonymise.
+before they are returned from /detect and /pseudonymise.
 """
 
 from pydantic import BaseModel

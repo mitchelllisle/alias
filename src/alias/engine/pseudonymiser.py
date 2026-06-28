@@ -6,10 +6,10 @@ from functools import partial
 from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig, RecognizerResult
 
-from alias.domain.anonymisation import AnonymisationRequest, AnonymisationResult, OperatorType
 from alias.domain.entities import Entity
+from alias.domain.pseudonymisation import OperatorType, PseudonymisationRequest, PseudonymisationResult
 
-# Default anonymisation strategy per entity type.
+# Default pseudonymisation strategy per entity type.
 # Presidio-specific parameter names live here in the engine, not in the domain.
 _DEFAULT_OPERATOR_CONFIGS: dict[str, tuple[str, dict[str, object]]] = {
     "PERSON": ("replace", {"new_value": "<PERSON>"}),
@@ -57,7 +57,7 @@ def _build_operators(overrides: dict[str, OperatorType]) -> dict[str, OperatorCo
 
 
 def _to_recognizer_result(entity: Entity) -> RecognizerResult:
-    """Convert a domain Entity to a presidio RecognizerResult for anonymisation."""
+    """Convert a domain Entity to a presidio RecognizerResult for pseudonymisation."""
     return RecognizerResult(
         entity_type=entity.entity_type.value,
         start=entity.start,
@@ -73,7 +73,7 @@ def _expected_replacement(entity: Entity, operators: dict[str, OperatorConfig]) 
     is returned. anonymised_text is always authoritative — this is for the audit map.
 
     Args:
-        entity: The entity being anonymised.
+        entity: The entity being pseudonymised.
         operators: Resolved operator config map.
 
     Returns:
@@ -99,7 +99,7 @@ def _build_entity_map(
     dependent on presidio's internal result ordering.
 
     Args:
-        entities: Detected entities to be anonymised.
+        entities: Detected entities to be pseudonymised.
         operators: Resolved operator config map.
 
     Returns:
@@ -108,27 +108,27 @@ def _build_entity_map(
     return {e.text: _expected_replacement(e, operators) for e in entities}
 
 
-class AsyncAnonymiser:
+class AsyncPseudonymiser:
     """Async wrapper around presidio AnonymizerEngine, offloaded to a thread-pool executor."""
 
     def __init__(self, engine: AnonymizerEngine, executor: ThreadPoolExecutor) -> None:
         self._engine = engine
         self._executor = executor
 
-    async def anonymise(self, request: AnonymisationRequest) -> AnonymisationResult:
-        """Anonymise text using the entities from a DetectionResult.
+    async def pseudonymise(self, request: PseudonymisationRequest) -> PseudonymisationResult:
+        """Pseudonymise text using the entities from a DetectionResult.
 
         Args:
-            request: AnonymisationRequest; detections must be populated by the caller.
+            request: PseudonymisationRequest; detections must be populated by the caller.
 
         Returns:
-            AnonymisationResult with anonymised text and audit entity_map.
+            PseudonymisationResult with pseudonymised text and audit entity_map.
 
         Raises:
             ValueError: if request.detections is None.
         """
         if request.detections is None:
-            raise ValueError("detections must be populated before calling anonymise()")
+            raise ValueError("detections must be populated before calling pseudonymise()")
 
         operators = _build_operators(request.operator_overrides)
         recognizer_results = [_to_recognizer_result(e) for e in request.detections.entities]
@@ -142,4 +142,4 @@ class AsyncAnonymiser:
             operators=operators,
         )
         result = await loop.run_in_executor(self._executor, _run)
-        return AnonymisationResult(anonymised_text=result.text, entity_map=entity_map)
+        return PseudonymisationResult(anonymised_text=result.text, entity_map=entity_map)
