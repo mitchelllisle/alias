@@ -1,12 +1,17 @@
 import hmac
 import secrets
+from functools import lru_cache
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from priveil.domain.entities import Entity
 
-_DEFAULT_AUDIT_HASH_KEY = secrets.token_bytes(32)
+
+@lru_cache(maxsize=1)
+def _process_audit_hash_key() -> bytes:
+    """Return a process-scoped fallback HMAC key for audit hashing."""
+    return secrets.token_bytes(32)
 
 
 class DetectionRequest(BaseModel, frozen=True):
@@ -55,7 +60,7 @@ class DetectionResult(BaseModel, frozen=True):
         Returns:
             DetectionResult with entities sorted by start offset and an HMAC digest.
         """
-        key = hash_key or _DEFAULT_AUDIT_HASH_KEY
+        key = hash_key or _process_audit_hash_key()
         input_hash = "hmac-sha256:" + hmac.new(key, text.encode(), "sha256").hexdigest()
         sorted_entities = tuple(sorted(entities, key=lambda e: e.start))
         return cls(

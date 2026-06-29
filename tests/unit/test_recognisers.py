@@ -112,6 +112,11 @@ class TestMedicareChecksum:
         digits = [2, 1, 2, 3, 4, 5, 6, 7, 1, 9]
         assert _medicare_checksum(digits) is False
 
+    def test_minimum_length_9_digits_supported(self) -> None:
+        digits = [2, 1, 2, 3, 4, 5, 6, 7]
+        checksum = sum(d * w for d, w in zip(digits, [1, 3, 7, 9, 1, 3, 7, 9])) % 10
+        assert _medicare_checksum(digits + [checksum]) is True
+
     def test_too_short(self) -> None:
         assert _medicare_checksum([2, 1, 2, 3, 4, 5, 6, 7]) is False
 
