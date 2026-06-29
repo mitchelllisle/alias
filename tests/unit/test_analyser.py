@@ -62,7 +62,7 @@ async def test_analyse_input_hash_is_stable(analyser: AsyncAnalyser) -> None:
     r1 = await analyser.analyse(req)
     r2 = await analyser.analyse(req)
     assert r1.input_hash == r2.input_hash
-    assert r1.input_hash.startswith("sha256:")
+    assert r1.input_hash.startswith("hmac-sha256:")
 
 
 async def test_analyse_entities_sorted_by_start(analyser: AsyncAnalyser) -> None:

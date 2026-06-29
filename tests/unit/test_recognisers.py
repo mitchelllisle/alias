@@ -113,14 +113,14 @@ class TestMedicareChecksum:
         assert _medicare_checksum(digits) is False
 
     def test_too_short(self) -> None:
-        assert _medicare_checksum([2, 1, 2, 3, 4, 5, 6, 7, 0]) is False
+        assert _medicare_checksum([2, 1, 2, 3, 4, 5, 6, 7]) is False
 
 
 class TestMedicareValidateResult:
     recogniser = AUMedicareRecogniser()
 
     def test_invalid_returns_false_not_none(self) -> None:
-        result = self.recogniser.validate_result("2123 45670 9")
+        result = self.recogniser.validate_result("2123 45671 9")
         assert result is False
 
 

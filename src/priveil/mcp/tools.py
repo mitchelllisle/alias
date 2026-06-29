@@ -7,7 +7,6 @@ Import this module to trigger registration; it is safe to import multiple times.
 from __future__ import annotations
 
 import logging
-
 from typing import Literal, cast
 
 from mcp.server.fastmcp import Context

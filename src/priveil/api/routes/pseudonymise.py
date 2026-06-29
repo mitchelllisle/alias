@@ -36,11 +36,12 @@ async def pseudonymise(
         logger.warning(
             "mode='judge' requested for /pseudonymise but PRIVEIL_JUDGE_MODEL is unset; falling back to mode='fast'."
         )
-    return await pseudonymiser.pseudonymise(
+    result = await pseudonymiser.pseudonymise(
         PseudonymisationRequest(
             text=request.text,
             detections=detections,
             operator_overrides=request.operator_overrides,
             mode="fast",  # LLM refinement already applied above; do not re-run
         )
-    ).model_copy(update={"mode_requested": request.mode, "mode_used": mode_used})
+    )
+    return result.model_copy(update={"mode_requested": request.mode, "mode_used": mode_used})
