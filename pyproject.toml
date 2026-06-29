@@ -1,6 +1,6 @@
 [project]
 name = "priveil"
-version = "0.2.0"
+version = "0.3.0"
 description = "Pseudonymisation service for reducing PII exposure in text workflows"
 authors = [
     {name = "Mitchell Lisle", email = "m.lisle90@gmail.com"}
