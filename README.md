@@ -20,7 +20,7 @@ A pseudonymisation service for reducing obvious PII exposure in text workflows, 
 ---
 
 > [!WARNING]  
-> On anonymisation and its limits
+> ## On anonymisation and its limits
 >
 > The word "anonymise" appears throughout this codebase and documentation because it is the term practitioners use. It is not accurate, and that matters.
 > 
