@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     # When set, judge_model is treated as the endpoint model/deployment name.
     judge_base_url: str | None = None
     judge_api_key: SecretStr | None = None
-    judge_score_threshold: float = 0.99
+    judge_score_threshold: float = 0.85
     judge_eligible_types: frozenset[str] = frozenset({"PERSON", "LOCATION", "DATE_TIME", "AU_BSB", "AU_ACCOUNT_NUMBER"})
     judge_context_chars: int = 60
     judge_timeout_ms: int = 250

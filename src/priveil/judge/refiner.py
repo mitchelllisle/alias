@@ -1,4 +1,12 @@
-"""Internal span-verdict refiner for /detect and /pseudonymise."""
+"""Internal span-verdict refiner for /detect and /pseudonymise.
+
+Trade-off vs the previous document-level refiner: this implementation only
+decides whether to *keep* uncertain detected spans; it cannot surface PII that
+the fast detector missed entirely (false negatives). The latency and token-cost
+reduction is significant — one constrained-JSON round-trip over uncertain spans
+only, with a hard timeout and fail-open — and the conservative bias ("when
+uncertain, keep it") preserves recall for the spans that were detected.
+"""
 
 from __future__ import annotations
 
@@ -67,11 +75,12 @@ class Refiner:
         try:
             async with asyncio.timeout(s.judge_timeout_ms / 1000):
                 keep_ids = await self._judge(payload)
-        except (TimeoutError, OpenAIError, json.JSONDecodeError, ValueError):
+        except (TimeoutError, OpenAIError, json.JSONDecodeError, ValueError, IndexError):
             return RefineResult(entities=tuple(certain + uncertain), judge_applied=False)
 
         kept = [entity for i, entity in enumerate(uncertain) if i in keep_ids]
-        return RefineResult(entities=tuple(certain + kept), judge_applied=True)
+        merged = sorted(certain + kept, key=lambda e: e.start)
+        return RefineResult(entities=tuple(merged), judge_applied=True)
 
     async def _judge(self, payload: list[dict[str, str | int]]) -> set[int]:
         model_name = self._settings.judge_model
@@ -88,6 +97,8 @@ class Refiner:
             ],
             extra_body={"guided_json": KEEP_SCHEMA},
         )
+        if not response.choices:
+            raise ValueError(f"Judge returned empty choices for model '{model_name}'.")
         content = response.choices[0].message.content
         if content is None:
             raise ValueError(f"Judge returned an empty response for model '{model_name}'.")

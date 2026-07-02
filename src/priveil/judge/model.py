@@ -37,6 +37,9 @@ def build_judge_model(settings: "Settings") -> JudgeModel:
     if settings.judge_base_url:
         model_name = settings.judge_model
         assert model_name is not None  # validated at top of this function
+        # Strip provider prefix (e.g. "openai:Qwen/...") — the base_url endpoint
+        # selects the backend; passing the prefix would produce an invalid model name.
+        model_name = model_name.split(":", 1)[1] if ":" in model_name else model_name
         api_key = settings.judge_api_key.get_secret_value() if settings.judge_api_key else "local"
         return _build_openai_compatible_model(
             model_name=model_name,
