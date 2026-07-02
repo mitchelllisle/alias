@@ -76,7 +76,7 @@ class Refiner:
             async with asyncio.timeout(s.judge_timeout_ms / 1000):
                 keep_ids = await self._judge(payload)
         except (TimeoutError, OpenAIError, json.JSONDecodeError, ValueError, IndexError):
-            return RefineResult(entities=tuple(certain + uncertain), judge_applied=False)
+            return RefineResult(entities=tuple(sorted(certain + uncertain, key=lambda e: e.start)), judge_applied=False)
 
         kept = [entity for i, entity in enumerate(uncertain) if i in keep_ids]
         merged = sorted(certain + kept, key=lambda e: e.start)
@@ -86,7 +86,10 @@ class Refiner:
         model_name = self._settings.judge_model
         if not model_name:
             raise ValueError("PRIVEIL_JUDGE_MODEL must be set to use judge mode.")
-        model_name = model_name.split(":", 1)[1] if ":" in model_name else model_name
+        # Do NOT strip provider prefixes here. build_judge_client points at a
+        # custom endpoint (Ollama, vLLM, etc.) which expects the model name exactly
+        # as configured — e.g. "qwen2.5:3b" for Ollama, "Qwen/Qwen3-4B" for vLLM.
+        # Provider-prefix stripping belongs in build_judge_model (assessor path only).
         response = await self._client.chat.completions.create(
             model=model_name,
             max_tokens=self._settings.judge_max_tokens,
