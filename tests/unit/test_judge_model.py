@@ -19,6 +19,7 @@ def _settings(**kwargs: object) -> Settings:
 
 # ── Built-in provider path ────────────────────────────────────────────────────
 
+
 def test_anthropic_string_returned_as_is() -> None:
     settings = _settings(judge_model="anthropic:claude-sonnet-4-6")
     result = build_judge_model(settings)
@@ -38,6 +39,7 @@ def test_bedrock_string_returned_as_is() -> None:
 
 
 # ── Databricks / custom endpoint path ────────────────────────────────────────
+
 
 def test_databricks_returns_openai_chat_model() -> None:
     from pydantic_ai.models.openai import OpenAIChatModel
@@ -66,6 +68,7 @@ def test_custom_endpoint_returns_openai_chat_model() -> None:
 
 # ── Validation ────────────────────────────────────────────────────────────────
 
+
 def test_no_model_raises_value_error() -> None:
     settings = _settings()  # judge_model defaults to None
     with pytest.raises(ValueError, match="PRIVEIL_JUDGE_MODEL must be set"):
@@ -79,6 +82,7 @@ def test_base_url_without_api_key_uses_local_default() -> None:
     )
     result = build_judge_model(settings)
     from pydantic_ai.models.openai import OpenAIChatModel
+
     assert isinstance(result, OpenAIChatModel)
 
 

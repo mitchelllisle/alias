@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 
@@ -26,7 +27,12 @@ def _entity(entity_type: EntityType, text: str, start: int, score: float) -> Ent
 
 
 def _settings(**kwargs: object) -> Settings:
-    return Settings(_env_file=None, spacy_model="en_core_web_sm", judge_model="openai:test", **kwargs)  # type: ignore[call-arg]
+    return Settings(
+        _env_file=None,
+        spacy_model="en_core_web_sm",
+        judge_model="openai:test",
+        **cast(dict[str, Any], kwargs),
+    )
 
 
 def _mock_client(content: str) -> SimpleNamespace:

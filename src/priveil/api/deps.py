@@ -15,6 +15,7 @@ def _get_analyser(request: Request) -> AsyncAnalyser:
 
 AnalyserDep = Annotated[AsyncAnalyser, Depends(_get_analyser)]
 
+
 def _get_pseudonymiser(request: Request) -> AsyncPseudonymiser:
     return cast(AsyncPseudonymiser, request.app.state.pseudonymiser)
 

@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from openai import OpenAIError
 from pydantic import BaseModel
 
 from priveil.domain.entities import Entity
@@ -66,7 +67,7 @@ class Refiner:
         try:
             async with asyncio.timeout(s.judge_timeout_ms / 1000):
                 keep_ids = await self._judge(payload)
-        except (TimeoutError, Exception):
+        except (TimeoutError, OpenAIError, json.JSONDecodeError, ValueError):
             return RefineResult(entities=tuple(certain + uncertain), judge_applied=False)
 
         kept = [entity for i, entity in enumerate(uncertain) if i in keep_ids]
@@ -89,7 +90,7 @@ class Refiner:
         )
         content = response.choices[0].message.content
         if content is None:
-            raise ValueError("Judge returned an empty response.")
+            raise ValueError(f"Judge returned an empty response for model '{model_name}'.")
         parsed = json.loads(content)
         keep = parsed.get("keep", [])
         return {int(i) for i in keep}
@@ -100,4 +101,3 @@ def build_refiner(settings: "Settings") -> Refiner:
     from priveil.judge.model import build_judge_client
 
     return Refiner(client=build_judge_client(settings), settings=settings)
-

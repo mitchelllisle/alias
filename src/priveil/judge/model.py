@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
+    from openai import AsyncOpenAI
     from pydantic_ai.models.openai import OpenAIChatModel
 
     from priveil.settings import Settings
@@ -76,5 +77,6 @@ def build_judge_client(settings: "Settings") -> "AsyncOpenAI":
         api_key = settings.judge_api_key.get_secret_value() if settings.judge_api_key else "local"
         return AsyncOpenAI(base_url=settings.judge_base_url, api_key=api_key)
 
-    api_key = settings.judge_api_key.get_secret_value() if settings.judge_api_key else None
-    return AsyncOpenAI(api_key=api_key)
+    if settings.judge_api_key:
+        return AsyncOpenAI(api_key=settings.judge_api_key.get_secret_value())
+    return AsyncOpenAI()

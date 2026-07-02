@@ -28,8 +28,7 @@ try:
     from mcp.server.fastmcp import Context, FastMCP
 except ImportError as exc:
     raise ImportError(
-        'The priveil MCP server requires the optional "mcp" extra. '
-        'Install it with: pip install "priveil[mcp]"'
+        'The priveil MCP server requires the optional "mcp" extra. Install it with: pip install "priveil[mcp]"'
     ) from exc
 
 
@@ -40,6 +39,7 @@ class _State:
     refiner: Refiner | None
     assessor: Agent[None, AssessmentDecision] | None
     executor: ThreadPoolExecutor
+
 
 logger = logging.getLogger(__name__)
 
@@ -58,11 +58,9 @@ def _require_spacy_model(model_name: str) -> None:
         SystemExit: If the model is not found, with an install hint.
     """
     import importlib.util
+
     if importlib.util.find_spec(model_name.replace("-", "_")) is None:
-        raise SystemExit(
-            f"spaCy model '{model_name}' is not installed.\n"
-            f"Run: python -m spacy download {model_name}"
-        )
+        raise SystemExit(f"spaCy model '{model_name}' is not installed.\nRun: python -m spacy download {model_name}")
 
 
 @asynccontextmanager

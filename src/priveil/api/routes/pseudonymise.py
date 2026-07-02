@@ -30,9 +30,7 @@ async def pseudonymise(
     if request.detections is not None:
         # Reconstruct an internal DetectionResult (with stable hash) from the
         # API-visible DetectionData supplied by the client.
-        detections = analyser.detections_from_entities(
-            request.text, request.detections.entities, request.mode
-        )
+        detections = analyser.detections_from_entities(request.text, request.detections.entities, request.mode)
     else:
         detections = await analyser.analyse(DetectionRequest(text=request.text, mode=request.mode))
 
