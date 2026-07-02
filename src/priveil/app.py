@@ -2,12 +2,13 @@ import importlib.metadata
 import logging
 from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 from presidio_anonymizer import AnonymizerEngine
 
 from priveil.api.routes import assess, detect, health, pseudonymise
+from priveil.domain.detection import DetectionRequest
 from priveil.engine.analyser import AsyncAnalyser, build_analyser_engine
 from priveil.engine.pseudonymiser import AsyncPseudonymiser
 from priveil.recognisers.registry import build_recognisers
@@ -44,13 +45,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     if settings.judge_model or settings.judge_base_url:
         from priveil.judge.assessor import build_assessor_agent
-        from priveil.judge.refiner import build_refiner_agent
+        from priveil.judge.refiner import build_refiner
 
-        app.state.refiner = build_refiner_agent(settings)
+        app.state.refiner = build_refiner(settings)
         app.state.assessor = build_assessor_agent(settings)
     else:
         app.state.refiner = None
         app.state.assessor = None
+
+    await app.state.analyser.analyse(DetectionRequest(text="Warmup: Jane Smith, TFN 123 456 782", mode="fast"))
+    if app.state.refiner is not None:
+        with suppress(Exception):
+            warmup = await app.state.analyser.analyse(DetectionRequest(text="Warmup Jane Smith", mode="fast"))
+            await app.state.refiner.refine("Warmup Jane Smith", warmup.entities)
 
     yield
     executor.shutdown(wait=True)

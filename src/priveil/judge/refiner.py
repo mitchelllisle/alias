@@ -1,150 +1,103 @@
-"""Internal LLM refiner for /detect and /pseudonymise.
-
-Not part of the public API surface. Takes a DetectionResult, asks the LLM
-to remove false positives and surface false negatives, returns a cleaned
-DetectionResult with the same schema.
-"""
+"""Internal span-verdict refiner for /detect and /pseudonymise."""
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from pydantic import BaseModel
+
+from priveil.domain.entities import Entity
+
 if TYPE_CHECKING:
+    from openai import AsyncOpenAI
+
     from priveil.settings import Settings
 
-from pydantic import BaseModel, Field
-from pydantic_ai import Agent
 
-from priveil.domain.detection import DetectionResult
-from priveil.domain.entities import ENTITY_CLASSIFICATION, Entity, EntityType
-from priveil.domain.judgement import JudgementRequest, JudgementResult
-
-# ── LLM adapter type — shape the refiner agent must emit ─────────────────────
-
-class _NewEntity(BaseModel):
-    text: str = Field(description="Exact text span from the original input")
-    entity_type: str = Field(description="Entity type string, e.g. 'AU_TFN'")
-    start: int = Field(description="Start character offset in the original text")
-    end: int = Field(description="End character offset (exclusive)")
-    score: float = Field(default=0.85, ge=0.0, le=1.0)
-
-
-class RefinerDecision(BaseModel):
-    reasoning: str = Field(description="One sentence per change explaining why")
-    false_positive_indices: list[int] = Field(
-        default_factory=list,
-        description="Zero-based indices into detections.entities that are false positives",
-    )
-    false_negatives: list[_NewEntity] = Field(
-        default_factory=list,
-        description="Entities present in the text that the detector missed",
-    )
+class RefineResult(BaseModel, frozen=True):
+    entities: tuple[Entity, ...]
+    judge_applied: bool
 
 
 _PROMPTS_DIR = Path(__file__).parent / "prompts"
 REFINER_SYSTEM_PROMPT: str = (_PROMPTS_DIR / "refiner.md").read_text(encoding="utf-8").strip()
+KEEP_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "keep": {"type": "array", "items": {"type": "integer"}},
+    },
+    "required": ["keep"],
+    "additionalProperties": False,
+}
 
 
-def _build_refiner_prompt(request: JudgementRequest) -> str:
-    entities_json = json.dumps(
-        [
+class Refiner:
+    def __init__(self, client: "AsyncOpenAI", settings: "Settings") -> None:
+        self._client = client
+        self._settings = settings
+
+    async def refine(self, text: str, entities: tuple[Entity, ...]) -> RefineResult:
+        s = self._settings
+        certain: list[Entity] = []
+        uncertain: list[Entity] = []
+
+        for entity in entities:
+            if entity.score >= s.judge_score_threshold or entity.entity_type.value not in s.judge_eligible_types:
+                certain.append(entity)
+            else:
+                uncertain.append(entity)
+
+        if not uncertain:
+            return RefineResult(entities=tuple(certain), judge_applied=False)
+
+        payload = [
             {
-                "index": i,
-                "text": e.text,
-                "entity_type": e.entity_type.value,
-                "start": e.start,
-                "end": e.end,
-                "score": e.score,
+                "id": i,
+                "type": entity.entity_type.value,
+                "span": entity.text,
+                "context": text[max(0, entity.start - s.judge_context_chars) : entity.end + s.judge_context_chars],
             }
-            for i, e in enumerate(request.detections.entities)
-        ],
-        indent=2,
-    )
-    return f"""Review these detections for false positives and missed PII.
+            for i, entity in enumerate(uncertain)
+        ]
 
-Text:
-\"\"\"{request.text}\"\"\"
-
-Detected entities (zero-based index):
-{entities_json}"""
-
-
-def _apply_decision(decision: RefinerDecision, request: JudgementRequest) -> JudgementResult:
-    """Apply a RefinerDecision to produce a JudgementResult. Pure function.
-
-    Guards applied:
-    - FP indices must be in [0, len(entities)) — negative indices are rejected.
-    - FN spans must be in-bounds and the text slice must match new_e.text exactly.
-    """
-    text = request.text
-    all_entities = list(request.detections.entities)
-    n = len(all_entities)
-    # Guard: reject negative indices and out-of-range indices.
-    fp_indices = {i for i in decision.false_positive_indices if 0 <= i < n}
-
-    removed = [all_entities[i] for i in sorted(fp_indices)]
-    kept = [e for i, e in enumerate(all_entities) if i not in fp_indices]
-
-    added: list[Entity] = []
-    for new_e in decision.false_negatives:
-        # Guard: reject invalid offsets and mismatched spans.
-        if (
-            new_e.start < 0
-            or new_e.end > len(text)
-            or new_e.start >= new_e.end
-            or text[new_e.start : new_e.end] != new_e.text
-        ):
-            continue
         try:
-            entity_type = EntityType(new_e.entity_type)
-        except ValueError:
-            continue
-        is_pii, sensitivity = ENTITY_CLASSIFICATION[entity_type]
-        added.append(
-            Entity(
-                text=new_e.text,
-                entity_type=entity_type,
-                start=new_e.start,
-                end=new_e.end,
-                score=new_e.score,
-                is_pii=is_pii,
-                sensitivity=sensitivity,
-            )
+            async with asyncio.timeout(s.judge_timeout_ms / 1000):
+                keep_ids = await self._judge(payload)
+        except (TimeoutError, Exception):
+            return RefineResult(entities=tuple(certain + uncertain), judge_applied=False)
+
+        kept = [entity for i, entity in enumerate(uncertain) if i in keep_ids]
+        return RefineResult(entities=tuple(certain + kept), judge_applied=True)
+
+    async def _judge(self, payload: list[dict[str, str | int]]) -> set[int]:
+        model_name = self._settings.judge_model
+        if not model_name:
+            raise ValueError("PRIVEIL_JUDGE_MODEL must be set to use judge mode.")
+        model_name = model_name.split(":", 1)[1] if ":" in model_name else model_name
+        response = await self._client.chat.completions.create(
+            model=model_name,
+            max_tokens=self._settings.judge_max_tokens,
+            temperature=0,
+            messages=[
+                {"role": "system", "content": REFINER_SYSTEM_PROMPT},
+                {"role": "user", "content": json.dumps(payload)},
+            ],
+            extra_body={"guided_json": KEEP_SCHEMA},
         )
-
-    adjusted_entities = tuple(sorted(kept + added, key=lambda e: e.start))
-    adjusted = DetectionResult(
-        entities=adjusted_entities,
-        input_hash=request.detections.input_hash,
-        mode_requested=request.detections.mode_requested,
-        mode_used=request.detections.mode_used,
-    )
-    return JudgementResult(adjusted=adjusted, removed=removed, added=added, reasoning=decision.reasoning)
+        content = response.choices[0].message.content
+        if content is None:
+            raise ValueError("Judge returned an empty response.")
+        parsed = json.loads(content)
+        keep = parsed.get("keep", [])
+        return {int(i) for i in keep}
 
 
-def build_refiner_agent(settings: Settings) -> Agent[None, RefinerDecision]:
-    """Build the internal refiner agent from application settings."""
-    from priveil.judge.model import build_judge_model
-    return Agent(
-        model=build_judge_model(settings),
-        output_type=RefinerDecision,
-        system_prompt=REFINER_SYSTEM_PROMPT,
-        model_settings={"temperature": settings.judge_temperature},
-    )
+def build_refiner(settings: "Settings") -> Refiner:
+    """Build the span-verdict refiner from settings."""
+    from priveil.judge.model import build_judge_client
 
+    return Refiner(client=build_judge_client(settings), settings=settings)
 
-async def refine(
-    detections: DetectionResult,
-    text: str,
-    agent: Agent[None, RefinerDecision],
-) -> DetectionResult:
-    """Run the LLM refiner and return cleaned detections.
-
-    Used internally by /detect and /pseudonymise when mode='judge'.
-    """
-    req = JudgementRequest(text=text, detections=detections)
-    prompt = _build_refiner_prompt(req)
-    result = await agent.run(prompt)
-    return _apply_decision(result.output, req).adjusted

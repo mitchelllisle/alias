@@ -15,6 +15,7 @@ async def test_detect_refine_true_runs_without_error(refined_client: AsyncClient
     )
     assert resp.status_code == 200
     assert "entities" in resp.json()["data"]
+    assert resp.json()["data"]["judge_applied"] is True
 
 
 async def test_detect_refine_false_skips_refiner(refined_client: AsyncClient) -> None:
@@ -23,6 +24,7 @@ async def test_detect_refine_false_skips_refiner(refined_client: AsyncClient) ->
         "/detect", json={"text": "Jane Smith", "mode": "fast"}
     )
     assert resp.status_code == 200
+    assert resp.json()["data"]["judge_applied"] is False
 
 
 async def test_detect_no_refiner_refine_true_silently_skips(detect_client: AsyncClient) -> None:
@@ -32,6 +34,7 @@ async def test_detect_no_refiner_refine_true_silently_skips(detect_client: Async
     )
     assert resp.status_code == 200
     assert len(resp.json()["data"]["entities"]) > 0
+    assert resp.json()["data"]["judge_applied"] is False
 
 
 async def test_detect_mode_defaults_to_judge(detect_client: AsyncClient) -> None:
@@ -48,6 +51,7 @@ async def test_pseudonymise_refine_true_runs_without_error(refined_client: Async
     )
     assert resp.status_code == 200
     assert "anonymised_text" in resp.json()["data"]
+    assert resp.json()["data"]["judge_applied"] is True
 
 
 async def test_pseudonymise_refine_false_skips_refiner(refined_client: AsyncClient) -> None:
@@ -55,6 +59,7 @@ async def test_pseudonymise_refine_false_skips_refiner(refined_client: AsyncClie
         "/pseudonymise", json={"text": "Jane Smith", "mode": "fast"}
     )
     assert resp.status_code == 200
+    assert resp.json()["data"]["judge_applied"] is False
 
 
 async def test_pseudonymise_no_refiner_refine_true_silently_skips(pseudonymise_client: AsyncClient) -> None:
@@ -63,3 +68,4 @@ async def test_pseudonymise_no_refiner_refine_true_silently_skips(pseudonymise_c
     )
     assert resp.status_code == 200
     assert "jane@example.com" not in resp.json()["data"]["anonymised_text"]
+    assert resp.json()["data"]["judge_applied"] is False

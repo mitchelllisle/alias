@@ -20,7 +20,7 @@ from pydantic_ai import Agent
 from priveil.engine.analyser import AsyncAnalyser, build_analyser_engine
 from priveil.engine.pseudonymiser import AsyncPseudonymiser
 from priveil.judge.assessor import AssessmentDecision
-from priveil.judge.refiner import RefinerDecision
+from priveil.judge.refiner import Refiner
 from priveil.recognisers.registry import build_recognisers
 from priveil.settings import Settings
 
@@ -37,7 +37,7 @@ except ImportError as exc:
 class _State:
     analyser: AsyncAnalyser
     pseudonymiser: AsyncPseudonymiser
-    refiner: Agent[None, RefinerDecision] | None
+    refiner: Refiner | None
     assessor: Agent[None, AssessmentDecision] | None
     executor: ThreadPoolExecutor
 
@@ -80,13 +80,13 @@ async def _lifespan(server: FastMCP) -> AsyncIterator[_State]:
             "PRIVEIL_AUDIT_HASH_KEY is unset; using an ephemeral process-local audit hash key. "
             "Set PRIVEIL_AUDIT_HASH_KEY to keep hashes stable across restarts."
         )
-    refiner: Agent[None, RefinerDecision] | None = None
+    refiner: Refiner | None = None
     assessor: Agent[None, AssessmentDecision] | None = None
     if settings.judge_model or settings.judge_base_url:
         from priveil.judge.assessor import build_assessor_agent
-        from priveil.judge.refiner import build_refiner_agent
+        from priveil.judge.refiner import build_refiner
 
-        refiner = build_refiner_agent(settings)
+        refiner = build_refiner(settings)
         assessor = build_assessor_agent(settings)
 
     state = _State(

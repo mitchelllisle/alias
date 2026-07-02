@@ -35,6 +35,7 @@ class DetectionData(BaseModel, frozen=True):
     """
 
     entities: tuple[Entity, ...]
+    judge_applied: bool = False
 
 
 class DetectionResult(BaseModel, frozen=True):

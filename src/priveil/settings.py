@@ -24,11 +24,17 @@ class Settings(BaseSettings):
     # When unset: mode='judge' falls back to 'fast' (with surfaced mode_used); /assess returns 503.
     judge_model: str | None = None
     judge_temperature: float = 0.0
-    # Custom OpenAI-compatible endpoint (e.g. Databricks Serving Endpoints).
-    # When set, judge_model is the deployment name and judge_api_key is required.
-    # When unset, judge_model uses pydantic-ai's provider:model string (e.g. anthropic:...).
+    # Custom OpenAI-compatible endpoint (e.g. local vLLM).
+    # When set, judge_model is treated as the endpoint model/deployment name.
     judge_base_url: str | None = None
     judge_api_key: SecretStr | None = None
+    judge_score_threshold: float = 0.99
+    judge_eligible_types: frozenset[str] = frozenset(
+        {"PERSON", "LOCATION", "DATE_TIME", "AU_BSB", "AU_ACCOUNT_NUMBER"}
+    )
+    judge_context_chars: int = 60
+    judge_timeout_ms: int = 250
+    judge_max_tokens: int = 64
     # Key used for HMAC audit hashes. Set this explicitly for stable hashes across
     # restarts and environments where audit correlation matters.
     audit_hash_key: SecretStr | None = None

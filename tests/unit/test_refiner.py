@@ -1,130 +1,79 @@
-"""Unit tests for priveil.judge.refiner — pure functions only, no I/O."""
+"""Unit tests for priveil.judge.refiner."""
 
+from __future__ import annotations
 
-from priveil.domain.detection import DetectionResult
+import asyncio
+from types import SimpleNamespace
+
+import pytest
+
 from priveil.domain.entities import ENTITY_CLASSIFICATION, Entity, EntityType
-from priveil.domain.judgement import JudgementRequest
-from priveil.judge.refiner import RefinerDecision, _apply_decision, _NewEntity
+from priveil.judge.refiner import Refiner
+from priveil.settings import Settings
 
 
-def _entity(entity_type: EntityType, text: str, start: int = 0) -> Entity:
+def _entity(entity_type: EntityType, text: str, start: int, score: float) -> Entity:
     is_pii, sensitivity = ENTITY_CLASSIFICATION[entity_type]
     return Entity(
-        text=text, entity_type=entity_type,
-        start=start, end=start + len(text),
-        score=0.9, is_pii=is_pii, sensitivity=sensitivity,
-    )
-
-
-def _req(*entities: Entity, text: str = "test") -> JudgementRequest:
-    return JudgementRequest(
         text=text,
-        detections=DetectionResult.from_text(text=text, entities=list(entities)),
+        entity_type=entity_type,
+        start=start,
+        end=start + len(text),
+        score=score,
+        is_pii=is_pii,
+        sensitivity=sensitivity,
     )
 
 
-# ── no changes ────────────────────────────────────────────────────────────────
-
-def test_no_changes_passthrough() -> None:
-    entity = _entity(EntityType.EMAIL_ADDRESS, "a@b.com")
-    req = _req(entity, text="Email a@b.com here")
-    decision = RefinerDecision(reasoning="all good")
-    result = _apply_decision(decision, req)
-    assert len(result.adjusted.entities) == 1
-    assert result.removed == []
-    assert result.added == []
+def _settings(**kwargs: object) -> Settings:
+    return Settings(_env_file=None, spacy_model="en_core_web_sm", judge_model="openai:test", **kwargs)  # type: ignore[call-arg]
 
 
-# ── false positive removal ────────────────────────────────────────────────────
+def _mock_client(content: str) -> SimpleNamespace:
+    async def _create(**_: object) -> SimpleNamespace:
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
 
-def test_false_positive_removed() -> None:
-    # from_text sorts by start — DATE_TIME (start=17) → index 1, PERSON (start=0) → index 0
-    person = _entity(EntityType.PERSON, "Jane Smith", start=0)
-    fp = _entity(EntityType.DATE_TIME, "4.5%", start=17)
-    req = _req(person, fp, text="Jane Smith earns 4.5%")
-    decision = RefinerDecision(reasoning="rate not a date", false_positive_indices=[1])
-    result = _apply_decision(decision, req)
-    assert len(result.removed) == 1
-    assert result.removed[0].text == "4.5%"
-    assert len(result.adjusted.entities) == 1
-    assert result.adjusted.entities[0].text == "Jane Smith"
+    return SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=_create)))
 
 
-def test_out_of_range_fp_index_ignored() -> None:
-    entity = _entity(EntityType.PERSON, "Alice")
-    req = _req(entity, text="Alice here")
-    decision = RefinerDecision(reasoning="ok", false_positive_indices=[99])
-    result = _apply_decision(decision, req)
-    assert len(result.adjusted.entities) == 1
-    assert result.removed == []
+@pytest.mark.asyncio
+async def test_refine_skips_judge_when_no_uncertain_entities() -> None:
+    entity = _entity(EntityType.EMAIL_ADDRESS, "a@b.com", 0, 0.7)
+    refiner = Refiner(client=_mock_client('{"keep":[0]}'), settings=_settings())
+    result = await refiner.refine("Email a@b.com", (entity,))
+    assert result.entities == (entity,)
+    assert result.judge_applied is False
 
 
-# ── false negative addition ───────────────────────────────────────────────────
-
-def test_false_negative_added() -> None:
-    req = _req(text="TFN is 123 456 782")
-    decision = RefinerDecision(
-        reasoning="TFN missed",
-        false_negatives=[_NewEntity(text="123 456 782", entity_type="AU_TFN", start=7, end=18)],
-    )
-    result = _apply_decision(decision, req)
-    assert len(result.added) == 1
-    assert result.added[0].entity_type == EntityType.AU_TFN
-    assert result.added[0].sensitivity == "critical"
+@pytest.mark.asyncio
+async def test_refine_keeps_only_judged_ids() -> None:
+    person = _entity(EntityType.PERSON, "Jane Smith", 0, 0.8)
+    location = _entity(EntityType.LOCATION, "Sydney", 20, 0.7)
+    refiner = Refiner(client=_mock_client('{"keep":[1]}'), settings=_settings(judge_score_threshold=0.99))
+    result = await refiner.refine("Jane Smith lives in Sydney", (person, location))
+    assert result.entities == (location,)
+    assert result.judge_applied is True
 
 
-def test_hallucinated_entity_type_silently_dropped() -> None:
-    req = _req(text="some text")
-    decision = RefinerDecision(
-        reasoning="found one",
-        false_negatives=[_NewEntity(text="some", entity_type="NOT_REAL", start=0, end=4)],
-    )
-    result = _apply_decision(decision, req)
-    assert result.added == []
+@pytest.mark.asyncio
+async def test_refine_fail_open_on_timeout() -> None:
+    async def _create(**_: object) -> SimpleNamespace:
+        await asyncio.sleep(0.01)
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content='{"keep":[0]}'))])
+
+    client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=_create)))
+    refiner = Refiner(client=client, settings=_settings(judge_timeout_ms=1))
+    person = _entity(EntityType.PERSON, "Jane Smith", 0, 0.7)
+    result = await refiner.refine("Jane Smith", (person,))
+    assert result.entities == (person,)
+    assert result.judge_applied is False
 
 
-def test_negative_fp_index_rejected() -> None:
-    """Python's -1 index would silently remove the last entity — must be blocked."""
-    entity = _entity(EntityType.PERSON, "Alice")
-    req = _req(entity, text="Alice here")
-    decision = RefinerDecision(reasoning="bad index", false_positive_indices=[-1])
-    result = _apply_decision(decision, req)
-    assert result.removed == []
-    assert len(result.adjusted.entities) == 1
-
-
-def test_fn_out_of_bounds_start_dropped() -> None:
-    req = _req(text="hello")
-    decision = RefinerDecision(
-        reasoning="bad offsets",
-        false_negatives=[_NewEntity(text="hello", entity_type="PERSON", start=-1, end=5)],
-    )
-    assert _apply_decision(decision, req).added == []
-
-
-def test_fn_out_of_bounds_end_dropped() -> None:
-    req = _req(text="hello")
-    decision = RefinerDecision(
-        reasoning="bad offsets",
-        false_negatives=[_NewEntity(text="hello", entity_type="PERSON", start=0, end=99)],
-    )
-    assert _apply_decision(decision, req).added == []
-
-
-def test_fn_span_mismatch_dropped() -> None:
-    """text[start:end] must equal new_e.text exactly — wrong text rejected."""
-    req = _req(text="hello world")
-    decision = RefinerDecision(
-        reasoning="wrong span",
-        false_negatives=[_NewEntity(text="world!", entity_type="PERSON", start=6, end=11)],
-    )
-    assert _apply_decision(decision, req).added == []
-
-
-def test_fn_start_ge_end_dropped() -> None:
-    req = _req(text="hello")
-    decision = RefinerDecision(
-        reasoning="bad offsets",
-        false_negatives=[_NewEntity(text="", entity_type="PERSON", start=3, end=3)],
-    )
-    assert _apply_decision(decision, req).added == []
+@pytest.mark.asyncio
+async def test_refine_includes_certain_entities_without_judging_them() -> None:
+    trusted = _entity(EntityType.PHONE_NUMBER, "0400 000 000", 0, 1.0)
+    uncertain = _entity(EntityType.PERSON, "Jane Smith", 15, 0.7)
+    refiner = Refiner(client=_mock_client('{"keep":[0]}'), settings=_settings())
+    result = await refiner.refine("0400 000 000 Jane Smith", (trusted, uncertain))
+    assert result.entities == (trusted, uncertain)
+    assert result.judge_applied is True

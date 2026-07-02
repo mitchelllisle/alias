@@ -6,7 +6,6 @@ from priveil.api.deps import AnalyserDep, PseudonymiserDep, RefinerDep
 from priveil.api.models import Meta, PriveilResponse, RequestMeta, ResponseMeta
 from priveil.domain.detection import DetectionData, DetectionRequest
 from priveil.domain.pseudonymisation import PseudonymisationData, PseudonymisationRequest
-from priveil.judge.refiner import refine
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -39,8 +38,11 @@ async def pseudonymise(
 
     input_hash = detections.input_hash
     mode_used = request.mode
+    judge_applied = False
     if request.mode == "judge" and refiner is not None:
-        detections = await refine(detections, request.text, refiner)
+        refined = await refiner.refine(request.text, detections.entities)
+        detections = detections.model_copy(update={"entities": refined.entities})
+        judge_applied = refined.judge_applied
     elif request.mode == "judge":
         mode_used = "fast"
         logger.warning(
@@ -60,5 +62,5 @@ async def pseudonymise(
             request=RequestMeta(mode=request.mode),
             response=ResponseMeta(mode=mode_used, input_hash=input_hash),
         ),
-        data=result,
+        data=result.model_copy(update={"judge_applied": judge_applied}),
     )

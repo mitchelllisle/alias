@@ -6,7 +6,7 @@ from pydantic_ai import Agent
 from priveil.engine.analyser import AsyncAnalyser
 from priveil.engine.pseudonymiser import AsyncPseudonymiser
 from priveil.judge.assessor import AssessmentDecision
-from priveil.judge.refiner import RefinerDecision
+from priveil.judge.refiner import Refiner
 
 
 def _get_analyser(request: Request) -> AsyncAnalyser:
@@ -22,12 +22,12 @@ def _get_pseudonymiser(request: Request) -> AsyncPseudonymiser:
 PseudonymiserDep = Annotated[AsyncPseudonymiser, Depends(_get_pseudonymiser)]
 
 
-def _get_refiner(request: Request) -> "Agent[None, RefinerDecision] | None":
+def _get_refiner(request: Request) -> Refiner | None:
     return request.app.state.refiner  # type: ignore[no-any-return]  # conduit: app.state is untyped by FastAPI
 
 
 # Optional — routes fall back to fast mode (with surfaced mode_used) when this is None.
-RefinerDep = Annotated["Agent[None, RefinerDecision] | None", Depends(_get_refiner)]
+RefinerDep = Annotated[Refiner | None, Depends(_get_refiner)]
 
 
 def _get_assessor(request: Request) -> "Agent[None, AssessmentDecision]":

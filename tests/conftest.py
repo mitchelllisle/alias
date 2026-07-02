@@ -9,8 +9,9 @@ from pydantic_ai.models.test import TestModel
 from priveil.app import create_app
 from priveil.engine.analyser import AsyncAnalyser, build_analyser_engine
 from priveil.engine.pseudonymiser import AsyncPseudonymiser
+from priveil.domain.entities import Entity
 from priveil.judge.assessor import AssessmentDecision
-from priveil.judge.refiner import RefinerDecision
+from priveil.judge.refiner import RefineResult, Refiner
 from priveil.recognisers.registry import build_recognisers
 from priveil.settings import Settings
 
@@ -44,10 +45,18 @@ def pseudonymiser() -> Generator[AsyncPseudonymiser, None, None]:
     executor.shutdown(wait=True)
 
 
+class _PassThroughRefiner(Refiner):
+    def __init__(self) -> None:
+        pass
+
+    async def refine(self, text: str, entities: tuple[Entity, ...]) -> RefineResult:  # type: ignore[override]
+        return RefineResult(entities=entities, judge_applied=True)
+
+
 @pytest.fixture(scope="session")
-def refiner_agent() -> Agent[None, RefinerDecision]:
-    """TestModel-backed refiner — deterministic, no real LLM calls."""
-    return Agent(TestModel(), output_type=RefinerDecision, system_prompt="test")
+def refiner_agent() -> Refiner:
+    """Pass-through refiner for tests that exercise judge-mode wiring."""
+    return _PassThroughRefiner()
 
 
 @pytest.fixture(scope="session")
@@ -94,7 +103,7 @@ async def refined_client(
     test_settings: Settings,
     analyser: AsyncAnalyser,
     pseudonymiser: AsyncPseudonymiser,
-    refiner_agent: Agent[None, RefinerDecision],
+    refiner_agent: Refiner,
 ) -> AsyncGenerator[AsyncClient, None]:
     """Analyser + pseudonymiser + TestModel refiner — tests the refine path."""
     app = create_app(settings=test_settings)
