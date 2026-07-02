@@ -28,10 +28,12 @@ class Settings(BaseSettings):
     # When set, judge_model is treated as the endpoint model/deployment name.
     judge_base_url: str | None = None
     judge_api_key: SecretStr | None = None
-    # Presidio's default recogniser confidence floor is 0.85; anything at or above
-    # that is treated as certain and bypasses the judge. Set below 0.85 to send
-    # Presidio's default-confidence detections to the judge for verification.
-    judge_score_threshold: float = 0.7
+    # Entities scoring >= this are "certain PII" and bypass the judge.
+    # Presidio's NER-based recognisers (PERSON, LOCATION) default to 0.85;
+    # pattern-based recognisers (AU_TFN, EMAIL_ADDRESS) emit 1.0.
+    # 0.9 keeps 1.0-confidence pattern matches certain while sending
+    # Presidio's typical 0.85 NER detections to the judge for verification.
+    judge_score_threshold: float = 0.9
     judge_eligible_types: frozenset[str] = frozenset({"PERSON", "LOCATION", "DATE_TIME", "AU_BSB", "AU_ACCOUNT_NUMBER"})
     judge_context_chars: int = 60
     judge_timeout_ms: int = 250
