@@ -17,7 +17,6 @@ from priveil.domain.detection import DetectionData, DetectionRequest
 from priveil.domain.pseudonymisation import OperatorType, PseudonymisationData, PseudonymisationRequest
 from priveil.judge.assessor import ASSESSMENT_ADVISORY_DISCLAIMER
 from priveil.judge.assessor import assess as _assess
-from priveil.judge.refiner import refine as _refine
 from priveil.mcp.server import get_state, mcp
 
 logger = logging.getLogger(__name__)
@@ -44,8 +43,11 @@ async def detect(
     state = get_state(ctx)
     result = await state.analyser.analyse(DetectionRequest(text=text, mode=mode))
     mode_used = mode
+    judge_applied = False
     if mode == "judge" and state.refiner is not None:
-        result = await _refine(result, text, state.refiner)
+        refined = await state.refiner.refine(text, result.entities)
+        result = result.model_copy(update={"entities": refined.entities})
+        judge_applied = refined.judge_applied
     elif mode == "judge":
         mode_used = "fast"
         logger.warning(
@@ -56,7 +58,7 @@ async def detect(
             request=RequestMeta(mode=mode),
             response=ResponseMeta(mode=mode_used, input_hash=result.input_hash),
         ),
-        data=DetectionData(entities=result.entities),
+        data=DetectionData(entities=result.entities, judge_applied=judge_applied),
     )
 
 
@@ -86,8 +88,11 @@ async def anonymise(
     detections = await state.analyser.analyse(DetectionRequest(text=text, mode=mode))
     input_hash = detections.input_hash
     mode_used = mode
+    judge_applied = False
     if mode == "judge" and state.refiner is not None:
-        detections = await _refine(detections, text, state.refiner)
+        refined = await state.refiner.refine(text, detections.entities)
+        detections = detections.model_copy(update={"entities": refined.entities})
+        judge_applied = refined.judge_applied
     elif mode == "judge":
         mode_used = "fast"
         logger.warning(
@@ -110,7 +115,7 @@ async def anonymise(
             request=RequestMeta(mode=mode),
             response=ResponseMeta(mode=mode_used, input_hash=input_hash),
         ),
-        data=result,
+        data=result.model_copy(update={"judge_applied": judge_applied}),
     )
 
 

@@ -49,3 +49,4 @@ class PseudonymisationData(BaseModel, frozen=True):
 
     anonymised_text: str
     entity_map: dict[str, str]
+    judge_applied: bool = False

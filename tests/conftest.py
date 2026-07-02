@@ -7,10 +7,11 @@ from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 
 from priveil.app import create_app
+from priveil.domain.entities import Entity
 from priveil.engine.analyser import AsyncAnalyser, build_analyser_engine
 from priveil.engine.pseudonymiser import AsyncPseudonymiser
 from priveil.judge.assessor import AssessmentDecision
-from priveil.judge.refiner import RefinerDecision
+from priveil.judge.refiner import Refiner, RefineResult
 from priveil.recognisers.registry import build_recognisers
 from priveil.settings import Settings
 
@@ -39,15 +40,24 @@ def analyser(test_settings: Settings) -> Generator[AsyncAnalyser, None, None]:
 def pseudonymiser() -> Generator[AsyncPseudonymiser, None, None]:
     """Build the AnonymizerEngine once per session."""
     from presidio_anonymizer import AnonymizerEngine
+
     executor = ThreadPoolExecutor(max_workers=2)
     yield AsyncPseudonymiser(AnonymizerEngine(), executor)
     executor.shutdown(wait=True)
 
 
+class _PassThroughRefiner(Refiner):
+    def __init__(self) -> None:
+        pass
+
+    async def refine(self, text: str, entities: tuple[Entity, ...]) -> RefineResult:
+        return RefineResult(entities=entities, judge_applied=True)
+
+
 @pytest.fixture(scope="session")
-def refiner_agent() -> Agent[None, RefinerDecision]:
-    """TestModel-backed refiner — deterministic, no real LLM calls."""
-    return Agent(TestModel(), output_type=RefinerDecision, system_prompt="test")
+def refiner_agent() -> Refiner:
+    """Pass-through refiner for tests that exercise judge-mode wiring."""
+    return _PassThroughRefiner()
 
 
 @pytest.fixture(scope="session")
@@ -57,6 +67,7 @@ def assessor_agent() -> Agent[None, AssessmentDecision]:
 
 
 # ── Clients ───────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 async def client(test_settings: Settings) -> AsyncGenerator[AsyncClient, None]:
@@ -94,7 +105,7 @@ async def refined_client(
     test_settings: Settings,
     analyser: AsyncAnalyser,
     pseudonymiser: AsyncPseudonymiser,
-    refiner_agent: Agent[None, RefinerDecision],
+    refiner_agent: Refiner,
 ) -> AsyncGenerator[AsyncClient, None]:
     """Analyser + pseudonymiser + TestModel refiner — tests the refine path."""
     app = create_app(settings=test_settings)

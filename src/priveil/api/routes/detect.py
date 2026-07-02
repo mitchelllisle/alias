@@ -5,7 +5,6 @@ from fastapi import APIRouter
 from priveil.api.deps import AnalyserDep, RefinerDep
 from priveil.api.models import Meta, PriveilResponse, RequestMeta, ResponseMeta
 from priveil.domain.detection import DetectionData, DetectionRequest
-from priveil.judge.refiner import refine
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -27,8 +26,11 @@ async def detect(
     """
     result = await analyser.analyse(request)
     mode_used = request.mode
+    judge_applied = False
     if request.mode == "judge" and refiner is not None:
-        result = await refine(result, request.text, refiner)
+        refined = await refiner.refine(request.text, result.entities)
+        result = result.model_copy(update={"entities": refined.entities})
+        judge_applied = refined.judge_applied
     elif request.mode == "judge":
         mode_used = "fast"
         logger.warning(
@@ -39,5 +41,5 @@ async def detect(
             request=RequestMeta(mode=request.mode),
             response=ResponseMeta(mode=mode_used, input_hash=result.input_hash),
         ),
-        data=DetectionData(entities=result.entities),
+        data=DetectionData(entities=result.entities, judge_applied=judge_applied),
     )

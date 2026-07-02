@@ -8,7 +8,7 @@ Tests cover:
 
 import pytest
 
-from priveil.judge.model import build_judge_model
+from priveil.judge.model import build_judge_client, build_judge_model
 from priveil.settings import Settings
 
 
@@ -18,6 +18,7 @@ def _settings(**kwargs: object) -> Settings:
 
 
 # ── Built-in provider path ────────────────────────────────────────────────────
+
 
 def test_anthropic_string_returned_as_is() -> None:
     settings = _settings(judge_model="anthropic:claude-sonnet-4-6")
@@ -38,6 +39,7 @@ def test_bedrock_string_returned_as_is() -> None:
 
 
 # ── Databricks / custom endpoint path ────────────────────────────────────────
+
 
 def test_databricks_returns_openai_chat_model() -> None:
     from pydantic_ai.models.openai import OpenAIChatModel
@@ -66,20 +68,22 @@ def test_custom_endpoint_returns_openai_chat_model() -> None:
 
 # ── Validation ────────────────────────────────────────────────────────────────
 
+
 def test_no_model_raises_value_error() -> None:
     settings = _settings()  # judge_model defaults to None
     with pytest.raises(ValueError, match="PRIVEIL_JUDGE_MODEL must be set"):
         build_judge_model(settings)
 
 
-def test_base_url_without_api_key_raises() -> None:
+def test_base_url_without_api_key_uses_local_default() -> None:
     settings = _settings(
         judge_model="some-deployment",
         judge_base_url="https://adb-123.azuredatabricks.net/serving-endpoints",
-        # judge_api_key intentionally omitted
     )
-    with pytest.raises(ValueError, match="PRIVEIL_JUDGE_API_KEY must be set"):
-        build_judge_model(settings)
+    result = build_judge_model(settings)
+    from pydantic_ai.models.openai import OpenAIChatModel
+
+    assert isinstance(result, OpenAIChatModel)
 
 
 def test_api_key_without_base_url_uses_builtin_path() -> None:
@@ -91,3 +95,9 @@ def test_api_key_without_base_url_uses_builtin_path() -> None:
     result = build_judge_model(settings)
     # Still the raw string — base_url is what triggers the custom path
     assert result == "anthropic:claude-sonnet-4-6"
+
+
+def test_build_judge_client_with_base_url() -> None:
+    settings = _settings(judge_model="openai:gpt-4o", judge_base_url="http://localhost:8001/v1")
+    client = build_judge_client(settings)
+    assert str(client.base_url) == "http://localhost:8001/v1/"
